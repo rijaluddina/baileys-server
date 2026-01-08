@@ -1,4 +1,5 @@
-import { MemoryQueue, type QueueJob, type QueueStats } from "./memory-queue";
+import { Job } from "bullmq";
+import { RedisQueue, type QueueStats } from "./redis-queue";
 import { sessionManager } from "@core/session/session.manager";
 import { eventBus } from "@infrastructure/events";
 import { logger } from "@infrastructure/logger";
@@ -34,8 +35,8 @@ export interface IncomingMessageJob {
 /**
  * Handler for outgoing messages
  */
-async function handleOutgoingMessage(job: QueueJob<OutgoingMessageJob>): Promise<{ messageId: string }> {
-    const { sessionId, to, type, content, quotedMessageId } = job.data;
+async function handleOutgoingMessage(job: Job<OutgoingMessageJob>): Promise<{ messageId: string }> {
+    const { sessionId, to, type, content } = job.data;
 
     const session = await sessionManager.getSession(sessionId);
     if (!session) {
@@ -67,40 +68,38 @@ async function handleOutgoingMessage(job: QueueJob<OutgoingMessageJob>): Promise
 /**
  * Handler for incoming messages (extensible pipeline)
  */
-const incomingHandlers: ((job: QueueJob<IncomingMessageJob>) => Promise<void>)[] = [];
+const incomingHandlers: ((job: Job<IncomingMessageJob>) => Promise<void>)[] = [];
 
-async function handleIncomingMessage(job: QueueJob<IncomingMessageJob>): Promise<void> {
+async function handleIncomingMessage(job: Job<IncomingMessageJob>): Promise<void> {
     for (const handler of incomingHandlers) {
         await handler(job);
     }
 }
 
 // Create queue instances
-export const outgoingQueue = new MemoryQueue<OutgoingMessageJob>(
-    "outgoing-messages",
-    handleOutgoingMessage,
-    {
-        maxAttempts: 3,
-        retryDelayMs: 2000,
-        concurrency: 10,
-    }
-);
+export const outgoingQueue = new RedisQueue<OutgoingMessageJob>("outgoing-messages", {
+    defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: "exponential", delay: 2000 },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+    },
+});
 
-export const incomingQueue = new MemoryQueue<IncomingMessageJob>(
-    "incoming-messages",
-    handleIncomingMessage,
-    {
-        maxAttempts: 3,
-        retryDelayMs: 1000,
-        concurrency: 20,
-    }
-);
+export const incomingQueue = new RedisQueue<IncomingMessageJob>("incoming-messages", {
+    defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: "exponential", delay: 1000 },
+        removeOnComplete: 100,
+        removeOnFail: 500,
+    },
+});
 
 /**
  * Register a handler for incoming messages
  */
 export function registerIncomingHandler(
-    handler: (job: QueueJob<IncomingMessageJob>) => Promise<void>
+    handler: (job: Job<IncomingMessageJob>) => Promise<void>
 ): void {
     incomingHandlers.push(handler);
 }
@@ -110,7 +109,7 @@ export function registerIncomingHandler(
  */
 export async function queueOutgoingMessage(
     data: OutgoingMessageJob,
-    options: { priority?: "low" | "normal" | "high" | "critical" } = {}
+    options: { priority?: 1 | 2 | 3 | 4; delay?: number } = {}
 ): Promise<string> {
     return outgoingQueue.add("send", data, options);
 }
@@ -125,31 +124,32 @@ export async function queueIncomingMessage(data: IncomingMessageJob): Promise<st
 /**
  * Get combined queue stats
  */
-export function getQueueStats(): {
+export async function getQueueStats(): Promise<{
     outgoing: QueueStats;
     incoming: QueueStats;
-} {
-    return {
-        outgoing: outgoingQueue.getStats(),
-        incoming: incomingQueue.getStats(),
-    };
+}> {
+    const [outgoing, incoming] = await Promise.all([
+        outgoingQueue.getStats(),
+        incomingQueue.getStats(),
+    ]);
+    return { outgoing, incoming };
 }
 
 /**
  * Start all queue workers
  */
 export function startQueues(): void {
-    outgoingQueue.start();
-    incomingQueue.start();
+    outgoingQueue.startWorker(handleOutgoingMessage, { concurrency: 10 });
+    incomingQueue.startWorker(handleIncomingMessage, { concurrency: 20 });
     log.info("Message queues started");
 }
 
 /**
  * Stop all queue workers
  */
-export function stopQueues(): void {
-    outgoingQueue.stop();
-    incomingQueue.stop();
+export async function stopQueues(): Promise<void> {
+    await outgoingQueue.close();
+    await incomingQueue.close();
     log.info("Message queues stopped");
 }
 

@@ -1,6 +1,8 @@
 import { apiRouter } from "@adapters/rest";
 import { sessionManager } from "@core/session/session.manager";
+import { webhookService, setupWebhookEventListeners } from "@core/webhook";
 import { startQueues, stopQueues } from "@infrastructure/queue";
+import { setupMetricsEventListeners } from "@infrastructure/metrics/collector";
 import { logger } from "@infrastructure/logger";
 import { eventBus } from "@infrastructure/events";
 
@@ -32,7 +34,8 @@ async function gracefulShutdown(signal: string): Promise<void> {
     log.info({ signal }, "Received shutdown signal");
 
     try {
-        stopQueues();
+        await stopQueues();
+        await webhookService.stopWorker();
         await sessionManager.shutdown();
         log.info("Graceful shutdown complete");
         process.exit(0);
@@ -51,6 +54,13 @@ async function startup(): Promise<void> {
 
     // Start message queues
     startQueues();
+
+    // Start webhook delivery worker
+    webhookService.startWorker();
+    setupWebhookEventListeners();
+
+    // Setup metrics collection
+    setupMetricsEventListeners();
 
     // Restore sessions from database
     const autoConnect = process.env.AUTO_CONNECT_SESSIONS === "true";

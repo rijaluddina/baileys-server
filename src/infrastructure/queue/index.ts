@@ -1,4 +1,4 @@
-export { MemoryQueue, type QueueJob, type QueueStats, type JobStatus, type JobPriority } from "./memory-queue";
+export { RedisQueue, type QueueStats, type JobPriority } from "./redis-queue";
 export {
     outgoingQueue,
     incomingQueue,

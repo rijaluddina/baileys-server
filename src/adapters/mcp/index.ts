@@ -263,8 +263,156 @@ server.tool(
 );
 
 // ============================================
+// CONVERSATION STATE TOOLS
+// ============================================
+
+import { conversationStateService } from "@core/conversation";
+
+// Tool: get_conversation_state
+server.tool(
+    "get_conversation_state",
+    "Get the conversation state for a specific chat JID",
+    {
+        sessionId: z.string().describe("The session ID"),
+        jid: z.string().describe("Chat JID"),
+    },
+    async ({ sessionId, jid }) => {
+        const state = await conversationStateService.get(sessionId, jid);
+
+        if (!state) {
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        exists: false,
+                        sessionId,
+                        jid,
+                        context: {},
+                        history: [],
+                    }),
+                }],
+            };
+        }
+
+        return {
+            content: [{
+                type: "text",
+                text: JSON.stringify({
+                    exists: true,
+                    jid: state.jid,
+                    agentId: state.agentId,
+                    context: state.context,
+                    history: state.history,
+                    metadata: state.metadata,
+                    version: state.version,
+                }),
+            }],
+        };
+    }
+);
+
+// Tool: update_conversation_state
+server.tool(
+    "update_conversation_state",
+    "Update the conversation state for a chat JID",
+    {
+        sessionId: z.string().describe("The session ID"),
+        jid: z.string().describe("Chat JID"),
+        context: z.record(z.unknown()).optional().describe("Context data to merge"),
+        agentId: z.string().optional().describe("Agent identifier"),
+        ttlMinutes: z.number().optional().describe("TTL in minutes"),
+    },
+    async ({ sessionId, jid, context, agentId, ttlMinutes }) => {
+        const state = await conversationStateService.update(sessionId, jid, {
+            context,
+            agentId,
+            ttlMinutes,
+        });
+
+        return {
+            content: [{
+                type: "text",
+                text: JSON.stringify({
+                    success: true,
+                    jid,
+                    version: state.version,
+                    updatedAt: state.updatedAt,
+                }),
+            }],
+        };
+    }
+);
+
+// Tool: add_to_history
+server.tool(
+    "add_to_history",
+    "Add a message to the conversation history",
+    {
+        sessionId: z.string().describe("The session ID"),
+        jid: z.string().describe("Chat JID"),
+        role: z.enum(["user", "assistant", "system"]).describe("Message role"),
+        content: z.string().describe("Message content"),
+    },
+    async ({ sessionId, jid, role, content }) => {
+        await conversationStateService.addToHistory(sessionId, jid, role, content);
+
+        return {
+            content: [{
+                type: "text",
+                text: JSON.stringify({
+                    success: true,
+                    jid,
+                    added: { role, content },
+                }),
+            }],
+        };
+    }
+);
+
+// Tool: clear_conversation_state
+server.tool(
+    "clear_conversation_state",
+    "Clear the conversation state for a chat JID",
+    {
+        sessionId: z.string().describe("The session ID"),
+        jid: z.string().describe("Chat JID"),
+    },
+    async ({ sessionId, jid }) => {
+        await conversationStateService.clear(sessionId, jid);
+
+        return {
+            content: [{
+                type: "text",
+                text: JSON.stringify({
+                    success: true,
+                    cleared: true,
+                    jid,
+                }),
+            }],
+        };
+    }
+);
+
+// ============================================
 // RESOURCES (Read-only Data Access)
 // ============================================
+
+// Resource: conversation state
+server.resource(
+    "state",
+    new ResourceTemplate("state://{sessionId}/{jid}", { list: undefined }),
+    async (uri, { sessionId, jid }) => {
+        const state = await conversationStateService.get(sessionId as string, jid as string);
+
+        return {
+            contents: [{
+                uri: uri.href,
+                text: JSON.stringify(state ?? { exists: false }),
+                mimeType: "application/json",
+            }],
+        };
+    }
+);
 
 // Resource: contacts list
 server.resource(

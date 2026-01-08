@@ -5,8 +5,8 @@ import { successResponse } from "../types";
 export const queueRoutes = new Hono();
 
 // Get queue stats
-queueRoutes.get("/stats", (c) => {
-    const stats = getQueueStats();
+queueRoutes.get("/stats", async (c) => {
+    const stats = await getQueueStats();
 
     return c.json(
         successResponse({
@@ -15,58 +15,75 @@ queueRoutes.get("/stats", (c) => {
                 incoming: stats.incoming,
             },
             totals: {
-                pending: stats.outgoing.pending + stats.incoming.pending,
-                processing: stats.outgoing.processing + stats.incoming.processing,
+                waiting: stats.outgoing.waiting + stats.incoming.waiting,
+                active: stats.outgoing.active + stats.incoming.active,
                 completed: stats.outgoing.completed + stats.incoming.completed,
                 failed: stats.outgoing.failed + stats.incoming.failed,
-                dead: stats.outgoing.dead + stats.incoming.dead,
+                delayed: stats.outgoing.delayed + stats.incoming.delayed,
             },
         })
     );
 });
 
-// Get dead letter queue
-queueRoutes.get("/dead-letter", (c) => {
-    const outgoingDead = outgoingQueue.getDeadLetterJobs();
-    const incomingDead = incomingQueue.getDeadLetterJobs();
+// Get failed jobs
+queueRoutes.get("/failed", async (c) => {
+    const queue = c.req.query("queue") || "outgoing";
+
+    const q = queue === "incoming" ? incomingQueue : outgoingQueue;
+    const jobs = await q.getFailedJobs(0, 50);
 
     return c.json(
         successResponse({
-            outgoing: outgoingDead.map((j) => ({
+            queue,
+            jobs: jobs.map((j) => ({
                 id: j.id,
-                type: j.type,
-                error: j.error,
-                attempts: j.attempts,
-                createdAt: j.createdAt,
-            })),
-            incoming: incomingDead.map((j) => ({
-                id: j.id,
-                type: j.type,
-                error: j.error,
-                attempts: j.attempts,
-                createdAt: j.createdAt,
+                name: j.name,
+                data: j.data,
+                failedReason: j.failedReason,
+                attemptsMade: j.attemptsMade,
+                timestamp: j.timestamp,
             })),
         })
     );
 });
 
-// Retry dead letter job
-queueRoutes.post("/dead-letter/:queue/:id/retry", (c) => {
+// Retry a failed job
+queueRoutes.post("/failed/:queue/:id/retry", async (c) => {
     const { queue, id } = c.req.param();
 
-    let success = false;
-    if (queue === "outgoing") {
-        success = outgoingQueue.retryDeadLetter(id);
-    } else if (queue === "incoming") {
-        success = incomingQueue.retryDeadLetter(id);
-    }
+    const q = queue === "incoming" ? incomingQueue : outgoingQueue;
 
-    if (!success) {
+    try {
+        await q.retryJob(id);
+        return c.json(successResponse({ success: true, jobId: id }));
+    } catch (err: any) {
         return c.json(
-            successResponse({ success: false, message: "Job not found in dead letter queue" }),
+            successResponse({ success: false, message: err.message }),
             404
         );
     }
+});
 
-    return c.json(successResponse({ success: true, jobId: id }));
+// Get job by ID
+queueRoutes.get("/jobs/:queue/:id", async (c) => {
+    const { queue, id } = c.req.param();
+
+    const q = queue === "incoming" ? incomingQueue : outgoingQueue;
+    const job = await q.getJob(id);
+
+    if (!job) {
+        return c.json(successResponse({ found: false }), 404);
+    }
+
+    return c.json(
+        successResponse({
+            id: job.id,
+            name: job.name,
+            data: job.data,
+            state: await job.getState(),
+            attemptsMade: job.attemptsMade,
+            processedOn: job.processedOn,
+            finishedOn: job.finishedOn,
+        })
+    );
 });

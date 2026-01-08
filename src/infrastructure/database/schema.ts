@@ -49,3 +49,42 @@ export type AuthKey = typeof authKeys.$inferSelect;
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
 
+// Webhooks for event delivery
+export const webhooks = pgTable("webhooks", {
+    id: text("id").primaryKey(), // UUID
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    secret: text("secret").notNull(), // For HMAC signing
+    events: jsonb("events").$type<string[]>().default([]), // Event types to subscribe (empty = all)
+    sessionIds: jsonb("session_ids").$type<string[]>().default([]), // Filter by sessions (empty = all)
+    active: boolean("active").notNull().default(true),
+    retries: integer("retries").default(3),
+    timeoutMs: integer("timeout_ms").default(10000),
+    lastDeliveryAt: timestamp("last_delivery_at"),
+    lastDeliveryStatus: text("last_delivery_status"),
+    deliveryCount: integer("delivery_count").default(0),
+    failureCount: integer("failure_count").default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Webhook = typeof webhooks.$inferSelect;
+export type NewWebhook = typeof webhooks.$inferInsert;
+
+// Conversation states for LLM agents
+export const conversationStates = pgTable("conversation_states", {
+    id: text("id").primaryKey(), // Composite: sessionId:jid
+    sessionId: text("session_id").notNull(),
+    jid: text("jid").notNull(), // WhatsApp JID
+    agentId: text("agent_id"), // Optional agent identifier
+    context: jsonb("context").$type<Record<string, unknown>>().default({}),
+    history: jsonb("history").$type<Array<{ role: string; content: string; timestamp: string }>>().default([]),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+    version: integer("version").default(1), // For optimistic locking
+    expiresAt: timestamp("expires_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ConversationState = typeof conversationStates.$inferSelect;
+export type NewConversationState = typeof conversationStates.$inferInsert;
