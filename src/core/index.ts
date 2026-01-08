@@ -1,0 +1,13 @@
+export { BaileysService } from "./baileys/baileys.service";
+export { sessionManager } from "./session/session.manager";
+export { MessagingService } from "./messaging";
+export { MediaService } from "./media";
+export { ContactService } from "./contact";
+export { GroupService } from "./group";
+export { PresenceService } from "./presence";
+export type { SessionInfo, SessionStatus } from "./session/session.manager";
+export type { SendTextOptions, SendMediaOptions, MessageResult } from "./messaging";
+export type { MediaType, DownloadedMedia } from "./media";
+export type { ContactProfile } from "./contact";
+export type { CreateGroupOptions, GroupInfo } from "./group";
+export type { PresenceType, PresenceInfo } from "./presence";
