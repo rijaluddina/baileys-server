@@ -3,8 +3,7 @@ import type {
     AuthenticationState,
     SignalDataTypeMap,
 } from "@whiskeysockets/baileys";
-import { proto } from "@whiskeysockets/baileys";
-import { initAuthCreds } from "@whiskeysockets/baileys";
+import { proto, initAuthCreds, BufferJSON } from "@whiskeysockets/baileys";
 import { db } from "@infrastructure/database";
 import { authStates, authKeys } from "@infrastructure/database/schema";
 import { eq, and } from "drizzle-orm";
@@ -19,6 +18,20 @@ const KEY_MAP: Record<keyof SignalDataTypeMap, string> = {
     "sender-key-memory": "sender-key-memory",
 };
 
+/**
+ * Serialize data for storage (convert Buffers to base64)
+ */
+function serialize(data: unknown): unknown {
+    return JSON.parse(JSON.stringify(data, BufferJSON.replacer));
+}
+
+/**
+ * Deserialize data from storage (convert base64 back to Buffers)
+ */
+function deserialize<T>(data: unknown): T {
+    return JSON.parse(JSON.stringify(data), BufferJSON.reviver) as T;
+}
+
 export async function usePostgresAuthState(
     sessionId: string
 ): Promise<{ state: AuthenticationState; saveCreds: () => Promise<void> }> {
@@ -31,7 +44,8 @@ export async function usePostgresAuthState(
     });
 
     if (existingState?.creds) {
-        creds = existingState.creds as AuthenticationCreds;
+        // Deserialize to restore Buffers
+        creds = deserialize<AuthenticationCreds>(existingState.creds);
         log.info("Loaded existing credentials");
     } else {
         creds = initAuthCreds();
@@ -39,17 +53,20 @@ export async function usePostgresAuthState(
     }
 
     const saveCreds = async () => {
+        // Serialize to convert Buffers to base64
+        const serializedCreds = serialize(creds);
+
         await db
             .insert(authStates)
             .values({
                 sessionId,
-                creds: creds as unknown as Record<string, unknown>,
+                creds: serializedCreds as Record<string, unknown>,
                 syncedAt: new Date(),
             })
             .onConflictDoUpdate({
                 target: authStates.sessionId,
                 set: {
-                    creds: creds as unknown as Record<string, unknown>,
+                    creds: serializedCreds as Record<string, unknown>,
                     syncedAt: new Date(),
                 },
             });
@@ -75,14 +92,17 @@ export async function usePostgresAuthState(
                     });
 
                     if (key?.keyData) {
-                        let value = key.keyData;
+                        // Deserialize to restore Buffers
+                        const deserialized = deserialize<SignalDataTypeMap[T]>(key.keyData);
 
-                        // Handle BufferJSON deserialization
-                        if (type === "app-state-sync-key" && value) {
-                            value = proto.Message.AppStateSyncKeyData.fromObject(value as object);
+                        // Handle AppStateSyncKeyData specially
+                        if (type === "app-state-sync-key" && deserialized) {
+                            result[id] = proto.Message.AppStateSyncKeyData.fromObject(
+                                deserialized as object
+                            ) as unknown as SignalDataTypeMap[T];
+                        } else {
+                            result[id] = deserialized;
                         }
-
-                        result[id] = value as SignalDataTypeMap[T];
                     }
                 }
 
@@ -95,6 +115,9 @@ export async function usePostgresAuthState(
                         const keyId = `${sessionId}:${type}:${id}`;
 
                         if (value) {
+                            // Serialize to convert Buffers to base64
+                            const serializedValue = serialize(value);
+
                             await db
                                 .insert(authKeys)
                                 .values({
@@ -102,11 +125,11 @@ export async function usePostgresAuthState(
                                     sessionId,
                                     type: type,
                                     keyId: id,
-                                    keyData: value as Record<string, unknown>,
+                                    keyData: serializedValue as Record<string, unknown>,
                                 })
                                 .onConflictDoUpdate({
                                     target: authKeys.id,
-                                    set: { keyData: value as Record<string, unknown> },
+                                    set: { keyData: serializedValue as Record<string, unknown> },
                                 });
                         } else {
                             await db.delete(authKeys).where(eq(authKeys.id, keyId));
@@ -119,3 +142,4 @@ export async function usePostgresAuthState(
 
     return { state, saveCreds };
 }
+
