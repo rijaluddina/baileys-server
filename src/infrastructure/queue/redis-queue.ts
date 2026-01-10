@@ -3,13 +3,31 @@ import { logger } from "@infrastructure/logger";
 
 const log = logger.child({ component: "queue" });
 
-// Redis connection options for BullMQ
-const redisConnection: ConnectionOptions = {
-    host: process.env.REDIS_HOST || "localhost",
-    port: Number(process.env.REDIS_PORT) || 6379,
-    password: process.env.REDIS_PASSWORD || undefined,
-    db: Number(process.env.REDIS_DB) || 0,
-};
+// Parse REDIS_URL (Railway format) or use individual env vars
+function getRedisConnection(): ConnectionOptions {
+    const redisUrl = process.env.REDIS_URL;
+
+    if (redisUrl) {
+        // Parse Redis URL (redis://user:password@host:port)
+        const url = new URL(redisUrl);
+        return {
+            host: url.hostname,
+            port: Number(url.port) || 6379,
+            password: url.password || undefined,
+            username: url.username || undefined,
+        };
+    }
+
+    // Fallback to individual env vars
+    return {
+        host: process.env.REDIS_HOST || "localhost",
+        port: Number(process.env.REDIS_PORT) || 6379,
+        password: process.env.REDIS_PASSWORD || undefined,
+        db: Number(process.env.REDIS_DB) || 0,
+    };
+}
+
+const redisConnection = getRedisConnection();
 
 export type JobPriority = 1 | 2 | 3 | 4; // 1 = highest priority
 
