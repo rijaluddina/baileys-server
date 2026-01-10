@@ -48,6 +48,10 @@ export const ErrorCodes = {
     SESSION_NOT_CONNECTED: "SESSION_NOT_CONNECTED",
     SOCKET_ERROR: "SOCKET_ERROR",
     INTERNAL_ERROR: "INTERNAL_ERROR",
+    RATE_LIMITED: "RATE_LIMITED",
+    CIRCUIT_BREAKER_OPEN: "CIRCUIT_BREAKER_OPEN",
+    UNAUTHORIZED: "UNAUTHORIZED",
+    FORBIDDEN: "FORBIDDEN",
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
