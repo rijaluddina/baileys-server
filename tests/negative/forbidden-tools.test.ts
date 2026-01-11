@@ -5,7 +5,7 @@
  * - modify_credentials via MCP → DENIED
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "bun:test";
 import { McpTestClient, MCP_DENYLIST } from "../utils/mcp-test-client";
 
 describe("Forbidden Tools", () => {

@@ -5,7 +5,7 @@
  * - Oversized message → rejected
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "bun:test";
 import { McpTestClient } from "../utils/mcp-test-client";
 
 // Validation function (would be in actual MCP adapter)

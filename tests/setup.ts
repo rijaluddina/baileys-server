@@ -1,4 +1,4 @@
-import { vi, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
+import { beforeAll, afterAll, beforeEach, afterEach, mock } from "bun:test";
 
 // Mock environment
 process.env.NODE_ENV = "test";
@@ -17,7 +17,6 @@ afterAll(() => {
 
 beforeEach(() => {
     // Reset mocks before each test
-    vi.clearAllMocks();
 });
 
 afterEach(() => {
@@ -25,4 +24,4 @@ afterEach(() => {
 });
 
 // Export test utilities
-export { vi };
+export { mock };

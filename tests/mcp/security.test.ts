@@ -6,7 +6,7 @@
  * - No events emitted for denied MCP actions
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { McpTestClient, MCP_ALLOWLIST, MCP_DENYLIST } from "../utils/mcp-test-client";
 import { EventEmitter } from "events";
 

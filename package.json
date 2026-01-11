@@ -11,12 +11,11 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:mcp": "vitest run tests/mcp",
-    "test:parity": "vitest run tests/parity",
-    "test:negative": "vitest run tests/negative",
-    "test:coverage": "vitest run --coverage"
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:mcp": "bun test tests/mcp",
+    "test:parity": "bun test tests/parity",
+    "test:negative": "bun test tests/negative"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.6",
@@ -36,8 +35,7 @@
     "@types/bun": "latest",
     "@types/ioredis": "^5.0.0",
     "@types/node": "^25.0.3",
-    "drizzle-kit": "^0.30.1",
-    "vitest": "^4.0.16"
+    "drizzle-kit": "^0.30.1"
   },
   "peerDependencies": {
     "typescript": "^5"

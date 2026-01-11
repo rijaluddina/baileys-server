@@ -3,7 +3,7 @@
  * Scope: Observable behavior only, NOT protocol completeness
  */
 
-import { vi } from "vitest";
+import { vi } from "bun:test";
 import { EventEmitter } from "events";
 
 export interface MockMessage {

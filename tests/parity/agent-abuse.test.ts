@@ -6,7 +6,7 @@
  * - Capability probing attempts
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "bun:test";
 import { McpTestClient, MCP_ALLOWLIST, MCP_DENYLIST } from "../utils/mcp-test-client";
 
 describe("Agent-Like Abuse Patterns", () => {
