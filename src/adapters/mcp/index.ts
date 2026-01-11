@@ -7,6 +7,9 @@ import { logger } from "@infrastructure/logger";
 
 const log = logger.child({ component: "mcp" });
 
+// Size limit for agent media
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
 // Create MCP server
 const server = new McpServer({
     name: "whatsapp-server",
@@ -58,6 +61,99 @@ server.tool(
         } catch (err: any) {
             return {
                 content: [{ type: "text", text: JSON.stringify({ error: err.message, code: "SEND_FAILED" }) }],
+                isError: true,
+            };
+        }
+    }
+);
+
+// Tool: send_image
+server.tool(
+    "send_image",
+    "Send an image to a WhatsApp contact or group (max 5MB)",
+    {
+        sessionId: z.string().describe("The session ID to use"),
+        to: z.string().describe("Recipient JID (phone@s.whatsapp.net or group@g.us)"),
+        imageUrl: z.string().url().optional().describe("URL of the image to send"),
+        imageBase64: z.string().optional().describe("Base64 encoded image data"),
+        caption: z.string().optional().describe("Optional caption for the image"),
+    },
+    async ({ sessionId, to, imageUrl, imageBase64, caption }) => {
+        const session = await sessionManager.getSession(sessionId);
+        if (!session) {
+            return {
+                content: [{ type: "text", text: JSON.stringify({ error: "Session not found", code: "SESSION_NOT_FOUND" }) }],
+                isError: true,
+            };
+        }
+
+        if (!session.isConnected()) {
+            return {
+                content: [{ type: "text", text: JSON.stringify({ error: "Session not connected. Please wait and retry.", code: "SESSION_NOT_CONNECTED", retryable: true }) }],
+                isError: true,
+            };
+        }
+
+        const socket = session.getSocket();
+        if (!socket) {
+            return {
+                content: [{ type: "text", text: JSON.stringify({ error: "Socket unavailable", code: "SOCKET_ERROR" }) }],
+                isError: true,
+            };
+        }
+
+        try {
+            let buffer: Buffer;
+
+            if (imageUrl) {
+                const response = await fetch(imageUrl);
+                if (!response.ok) {
+                    return {
+                        content: [{ type: "text", text: JSON.stringify({ error: "Failed to fetch image from URL. Check if URL is accessible.", code: "FETCH_FAILED" }) }],
+                        isError: true,
+                    };
+                }
+                buffer = Buffer.from(await response.arrayBuffer());
+            } else if (imageBase64) {
+                buffer = Buffer.from(imageBase64, "base64");
+            } else {
+                return {
+                    content: [{ type: "text", text: JSON.stringify({ error: "Either imageUrl or imageBase64 is required", code: "MISSING_IMAGE" }) }],
+                    isError: true,
+                };
+            }
+
+            // Size validation
+            if (buffer.length > MAX_IMAGE_SIZE) {
+                return {
+                    content: [{ type: "text", text: JSON.stringify({ error: `Image exceeds 5MB limit (${(buffer.length / 1024 / 1024).toFixed(1)}MB)`, code: "IMAGE_TOO_LARGE" }) }],
+                    isError: true,
+                };
+            }
+
+            const result = await socket.sendMessage(to, {
+                image: buffer,
+                caption,
+                mimetype: "image/jpeg",
+            });
+
+            log.info({ sessionId, to, size: buffer.length }, "Image sent via MCP");
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        messageId: result?.key?.id,
+                        to,
+                        timestamp: new Date().toISOString(),
+                    }),
+                }],
+            };
+        } catch (err: any) {
+            log.error({ err, sessionId }, "MCP send_image failed");
+            return {
+                content: [{ type: "text", text: JSON.stringify({ error: "Failed to send image. Please retry.", code: "SEND_FAILED", retryable: true }) }],
                 isError: true,
             };
         }
