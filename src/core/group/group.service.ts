@@ -1,6 +1,16 @@
 import type { WASocket, GroupMetadata, GroupParticipant } from "@whiskeysockets/baileys";
 import { eventBus } from "@infrastructure/events";
 import { logger } from "@infrastructure/logger";
+import { audit, AuditActions } from "@infrastructure/logger/audit-logger";
+import { Errors } from "@infrastructure/errors";
+
+// Rate limiting for group operations
+const groupCreateRateLimiter = new Map<string, { count: number; resetAt: number }>();
+const GROUP_CREATE_LIMIT = 5; // Max 5 groups per hour
+const GROUP_CREATE_WINDOW = 60 * 60 * 1000; // 1 hour
+
+// Batch operation limits
+const MAX_PARTICIPANTS_PER_BATCH = 5;
 
 export interface CreateGroupOptions {
     subject: string;
@@ -21,6 +31,11 @@ export interface GroupInfo {
     participants: GroupParticipant[];
     announce?: boolean;
     restrict?: boolean;
+}
+
+export interface BatchOperationResult {
+    success: string[];
+    failed: Array<{ jid: string; error: string }>;
 }
 
 export class GroupService {
