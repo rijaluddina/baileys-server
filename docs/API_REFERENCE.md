@@ -19,8 +19,9 @@ Base URL: `http://localhost:3000`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/v1/messages/text` | Send text |
-| POST | `/v1/messages/media` | Send media |
+| POST | `/v1/messages/send` | Send text (supports `quotedMessageId` for replies) |
+| POST | `/v1/messages/send-media` | Send media (`mediaBase64` or `mediaUrl`, max 5MB) |
+| DELETE | `/v1/messages` | Delete message |
 
 ### Contacts
 
@@ -89,7 +90,18 @@ All `/v1/*` endpoints require API key:
 X-API-Key: wsk_xxxxxxxxxxxxx
 ```
 
-Skip auth in development mode.
+### Roles
+
+| Role | Permissions |
+|------|-------------|
+| `viewer` | Read-only access |
+| `operator` | Read + write (send messages, manage state) |
+| `admin` | Full access (create/revoke API keys, manage users) |
+
+> **MCP Proxy**: The MCP server authenticates to REST using an `operator`-role API key.
+> See [MCP Architecture](MCP_ARCHITECTURE.md) for setup.
+
+Skip auth in development mode (`NODE_ENV=development`).
 
 ---
 

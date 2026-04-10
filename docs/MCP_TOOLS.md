@@ -1,5 +1,8 @@
 # MCP Tools Reference
 
+> **Architecture**: MCP uses a Proxy model — all tools forward requests to the REST API.
+> See [MCP Architecture](MCP_ARCHITECTURE.md) for details.
+
 ## Messaging Tools
 
 ### send_text_message
@@ -13,15 +16,35 @@ Send a text message to a WhatsApp contact or group.
 | to | string | ✓ | Recipient JID |
 | text | string | ✓ | Message text |
 
+**Proxied to:** `POST /v1/messages/send`
+
 **Response:**
 ```json
 {
-  "success": true,
   "messageId": "ABCD1234",
   "to": "628xxx@s.whatsapp.net",
   "timestamp": 1704672000
 }
 ```
+
+---
+
+### send_image
+
+Send an image to a WhatsApp contact or group (max 5MB).
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| sessionId | string | ✓ | Session ID |
+| to | string | ✓ | Recipient JID |
+| imageUrl | string (URL) | | URL of the image to send |
+| imageBase64 | string | | Base64 encoded image data |
+| caption | string | | Optional caption |
+
+> Either `imageUrl` or `imageBase64` must be provided. The REST API handles URL downloading — MCP does not download media itself.
+
+**Proxied to:** `POST /v1/messages/send-media`
 
 ---
 
@@ -37,6 +60,8 @@ Reply to a specific message.
 | text | string | ✓ | Reply text |
 | quotedMessageId | string | ✓ | Message ID to reply to |
 
+**Proxied to:** `POST /v1/messages/send`
+
 ---
 
 ## Contact Tools
@@ -51,6 +76,8 @@ Get profile info for a contact.
 | sessionId | string | ✓ | Session ID |
 | jid | string | ✓ | Contact JID |
 
+**Proxied to:** `GET /v1/contacts/:jid?sessionId=`
+
 ---
 
 ### get_group_metadata
@@ -62,6 +89,8 @@ Get metadata for a WhatsApp group.
 |------|------|----------|-------------|
 | sessionId | string | ✓ | Session ID |
 | groupId | string | ✓ | Group JID |
+
+**Proxied to:** `GET /v1/groups/:id?sessionId=`
 
 ---
 
@@ -78,6 +107,8 @@ Show typing indicator in a chat.
 | jid | string | ✓ | Chat JID |
 | duration | number | | Duration in ms (default 3000) |
 
+**Proxied to:** `POST /v1/presence/:jid/typing?sessionId=`
+
 ---
 
 ## State Tools
@@ -91,6 +122,8 @@ Get conversation state for a JID.
 |------|------|----------|-------------|
 | sessionId | string | ✓ | Session ID |
 | jid | string | ✓ | Chat JID |
+
+**Proxied to:** `GET /v1/states/:sessionId/:jid`
 
 **Response:**
 ```json
@@ -120,6 +153,8 @@ Update conversation state.
 | agentId | string | | Agent identifier |
 | ttlMinutes | number | | TTL for auto-expiry |
 
+**Proxied to:** `PUT /v1/states/:sessionId/:jid`
+
 ---
 
 ### add_to_history
@@ -134,6 +169,8 @@ Add a message to conversation history.
 | role | enum | ✓ | "user", "assistant", "system" |
 | content | string | ✓ | Message content |
 
+**Proxied to:** `PUT /v1/states/:sessionId/:jid`
+
 ---
 
 ### clear_conversation_state
@@ -145,3 +182,45 @@ Clear conversation state.
 |------|------|----------|-------------|
 | sessionId | string | ✓ | Session ID |
 | jid | string | ✓ | Chat JID |
+
+**Proxied to:** `DELETE /v1/states/:sessionId/:jid`
+
+---
+
+## Rate Limiting
+
+MCP applies a **double-layer rate limit**:
+
+| Layer | Default | Description |
+|-------|---------|-------------|
+| Layer 2 (MCP) | 30 req/min | Blocks before HTTP request is made |
+| Layer 1 (REST) | 100 req/min | Blocks at the API server |
+
+When rate limited, tools return:
+```json
+{
+  "error": "Rate limit exceeded. Please slow down.",
+  "code": "RATE_LIMITED",
+  "retryAfterMs": 45000
+}
+```
+
+## Security
+
+### Allowlisted Tools (10)
+
+Only these tools are registered in the MCP server. Everything else is denied.
+
+### Denied Tools (explicit)
+
+| Tool | Reason |
+|------|--------|
+| `delete_session` | Destructive — admin only |
+| `create_session` | Admin operation |
+| `list_all_sessions` | Information leak |
+| `modify_credentials` | Security risk |
+| `export_auth_state` | Credential theft |
+| `import_auth_state` | Session hijacking |
+| `raw_socket_access` | Full Baileys access |
+| `execute_raw_command` | Arbitrary execution |
+| `revoke_api_key` | Privilege escalation |

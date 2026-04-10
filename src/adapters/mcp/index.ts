@@ -1,14 +1,15 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { sessionManager } from "@core/session/session.manager";
-import { eventBus } from "@infrastructure/events";
 import { logger } from "@infrastructure/logger";
+import { McpApiClient } from "./api-client";
+import { McpRateLimiter } from "./mcp-rate-limiter";
 
 const log = logger.child({ component: "mcp" });
 
-// Size limit for agent media
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+// Initialize proxy client & rate limiter
+const client = new McpApiClient();
+const limiter = new McpRateLimiter();
 
 // Create MCP server
 const server = new McpServer({
@@ -17,7 +18,7 @@ const server = new McpServer({
 });
 
 // ============================================
-// TOOLS (Agent Action Allowlist)
+// TOOLS (Agent Action Allowlist — Proxy to REST)
 // ============================================
 
 // Tool: send_text_message
@@ -30,47 +31,16 @@ server.tool(
         text: z.string().describe("Message text content"),
     },
     async ({ sessionId, to, text }) => {
-        const session = await sessionManager.getSession(sessionId);
-        if (!session) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not found", code: "SESSION_NOT_FOUND" }) }],
-                isError: true,
-            };
-        }
-
-        if (!session.isConnected()) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not connected", code: "SESSION_NOT_CONNECTED" }) }],
-                isError: true,
-            };
-        }
-
-        try {
-            const result = await session.messaging.sendText(to, text);
-            return {
-                content: [{
-                    type: "text",
-                    text: JSON.stringify({
-                        success: true,
-                        messageId: result.messageId,
-                        to,
-                        timestamp: result.timestamp,
-                    }),
-                }],
-            };
-        } catch (err: any) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: err.message, code: "SEND_FAILED" }) }],
-                isError: true,
-            };
-        }
+        return limiter.guard(() =>
+            client.proxyPost("/v1/messages/send", { sessionId, to, text })
+        );
     }
 );
 
 // Tool: send_image
 server.tool(
     "send_image",
-    "Send an image to a WhatsApp contact or group (max 5MB)",
+    "Send an image to a WhatsApp contact or group (max 5MB). Provide either imageUrl or imageBase64.",
     {
         sessionId: z.string().describe("The session ID to use"),
         to: z.string().describe("Recipient JID (phone@s.whatsapp.net or group@g.us)"),
@@ -79,84 +49,17 @@ server.tool(
         caption: z.string().optional().describe("Optional caption for the image"),
     },
     async ({ sessionId, to, imageUrl, imageBase64, caption }) => {
-        const session = await sessionManager.getSession(sessionId);
-        if (!session) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not found", code: "SESSION_NOT_FOUND" }) }],
-                isError: true,
-            };
-        }
-
-        if (!session.isConnected()) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not connected. Please wait and retry.", code: "SESSION_NOT_CONNECTED", retryable: true }) }],
-                isError: true,
-            };
-        }
-
-        const socket = session.getSocket();
-        if (!socket) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Socket unavailable", code: "SOCKET_ERROR" }) }],
-                isError: true,
-            };
-        }
-
-        try {
-            let buffer: Buffer;
-
-            if (imageUrl) {
-                const response = await fetch(imageUrl);
-                if (!response.ok) {
-                    return {
-                        content: [{ type: "text", text: JSON.stringify({ error: "Failed to fetch image from URL. Check if URL is accessible.", code: "FETCH_FAILED" }) }],
-                        isError: true,
-                    };
-                }
-                buffer = Buffer.from(await response.arrayBuffer());
-            } else if (imageBase64) {
-                buffer = Buffer.from(imageBase64, "base64");
-            } else {
-                return {
-                    content: [{ type: "text", text: JSON.stringify({ error: "Either imageUrl or imageBase64 is required", code: "MISSING_IMAGE" }) }],
-                    isError: true,
-                };
-            }
-
-            // Size validation
-            if (buffer.length > MAX_IMAGE_SIZE) {
-                return {
-                    content: [{ type: "text", text: JSON.stringify({ error: `Image exceeds 5MB limit (${(buffer.length / 1024 / 1024).toFixed(1)}MB)`, code: "IMAGE_TOO_LARGE" }) }],
-                    isError: true,
-                };
-            }
-
-            const result = await socket.sendMessage(to, {
-                image: buffer,
+        return limiter.guard(() =>
+            client.proxyPost("/v1/messages/send-media", {
+                sessionId,
+                to,
+                type: "image",
+                mediaUrl: imageUrl,
+                mediaBase64: imageBase64,
                 caption,
                 mimetype: "image/jpeg",
-            });
-
-            log.info({ sessionId, to, size: buffer.length }, "Image sent via MCP");
-
-            return {
-                content: [{
-                    type: "text",
-                    text: JSON.stringify({
-                        success: true,
-                        messageId: result?.key?.id,
-                        to,
-                        timestamp: new Date().toISOString(),
-                    }),
-                }],
-            };
-        } catch (err: any) {
-            log.error({ err, sessionId }, "MCP send_image failed");
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Failed to send image. Please retry.", code: "SEND_FAILED", retryable: true }) }],
-                isError: true,
-            };
-        }
+            })
+        );
     }
 );
 
@@ -171,49 +74,9 @@ server.tool(
         quotedMessageId: z.string().describe("ID of the message to reply to"),
     },
     async ({ sessionId, to, text, quotedMessageId }) => {
-        const session = await sessionManager.getSession(sessionId);
-        if (!session) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not found", code: "SESSION_NOT_FOUND" }) }],
-                isError: true,
-            };
-        }
-
-        if (!session.isConnected()) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not connected", code: "SESSION_NOT_CONNECTED" }) }],
-                isError: true,
-            };
-        }
-
-        try {
-            // Create quoted message structure
-            const quotedMessage = {
-                key: {
-                    remoteJid: to,
-                    id: quotedMessageId,
-                },
-            } as any;
-
-            const result = await session.messaging.reply(to, text, quotedMessage);
-            return {
-                content: [{
-                    type: "text",
-                    text: JSON.stringify({
-                        success: true,
-                        messageId: result.messageId,
-                        to,
-                        quotedMessageId,
-                        timestamp: result.timestamp,
-                    }),
-                }],
-            };
-        } catch (err: any) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: err.message, code: "REPLY_FAILED" }) }],
-                isError: true,
-            };
-        }
+        return limiter.guard(() =>
+            client.proxyPost("/v1/messages/send", { sessionId, to, text, quotedMessageId })
+        );
     }
 );
 
@@ -226,38 +89,9 @@ server.tool(
         jid: z.string().describe("Contact JID (phone@s.whatsapp.net)"),
     },
     async ({ sessionId, jid }) => {
-        const session = await sessionManager.getSession(sessionId);
-        if (!session) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not found", code: "SESSION_NOT_FOUND" }) }],
-                isError: true,
-            };
-        }
-
-        if (!session.isConnected()) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not connected", code: "SESSION_NOT_CONNECTED" }) }],
-                isError: true,
-            };
-        }
-
-        try {
-            const profile = await session.contacts.getProfile(jid);
-            return {
-                content: [{
-                    type: "text",
-                    text: JSON.stringify({
-                        success: true,
-                        profile,
-                    }),
-                }],
-            };
-        } catch (err: any) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: err.message, code: "PROFILE_FETCH_FAILED" }) }],
-                isError: true,
-            };
-        }
+        return limiter.guard(() =>
+            client.proxyGet(`/v1/contacts/${encodeURIComponent(jid)}?sessionId=${encodeURIComponent(sessionId)}`)
+        );
     }
 );
 
@@ -270,45 +104,9 @@ server.tool(
         groupId: z.string().describe("Group JID (id@g.us)"),
     },
     async ({ sessionId, groupId }) => {
-        const session = await sessionManager.getSession(sessionId);
-        if (!session) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not found", code: "SESSION_NOT_FOUND" }) }],
-                isError: true,
-            };
-        }
-
-        if (!session.isConnected()) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not connected", code: "SESSION_NOT_CONNECTED" }) }],
-                isError: true,
-            };
-        }
-
-        try {
-            const metadata = await session.groups.getMetadata(groupId);
-            return {
-                content: [{
-                    type: "text",
-                    text: JSON.stringify({
-                        success: true,
-                        group: {
-                            id: metadata.id,
-                            subject: metadata.subject,
-                            desc: metadata.desc,
-                            owner: metadata.owner,
-                            participantCount: metadata.participants.length,
-                            creation: metadata.creation,
-                        },
-                    }),
-                }],
-            };
-        } catch (err: any) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: err.message, code: "GROUP_FETCH_FAILED" }) }],
-                isError: true,
-            };
-        }
+        return limiter.guard(() =>
+            client.proxyGet(`/v1/groups/${encodeURIComponent(groupId)}?sessionId=${encodeURIComponent(sessionId)}`)
+        );
     }
 );
 
@@ -321,48 +119,16 @@ server.tool(
         jid: z.string().describe("Chat JID to show typing in"),
         duration: z.number().optional().describe("Duration in ms (default 3000)"),
     },
-    async ({ sessionId, jid, duration }) => {
-        const session = await sessionManager.getSession(sessionId);
-        if (!session) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not found", code: "SESSION_NOT_FOUND" }) }],
-                isError: true,
-            };
-        }
-
-        if (!session.isConnected()) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: "Session not connected", code: "SESSION_NOT_CONNECTED" }) }],
-                isError: true,
-            };
-        }
-
-        try {
-            await session.presence.showTyping(jid, duration ?? 3000);
-            return {
-                content: [{
-                    type: "text",
-                    text: JSON.stringify({
-                        success: true,
-                        jid,
-                        typing: true,
-                    }),
-                }],
-            };
-        } catch (err: any) {
-            return {
-                content: [{ type: "text", text: JSON.stringify({ error: err.message, code: "TYPING_FAILED" }) }],
-                isError: true,
-            };
-        }
+    async ({ sessionId, jid }) => {
+        return limiter.guard(() =>
+            client.proxyPost(`/v1/presence/${encodeURIComponent(jid)}/typing?sessionId=${encodeURIComponent(sessionId)}`, {})
+        );
     }
 );
 
 // ============================================
 // CONVERSATION STATE TOOLS
 // ============================================
-
-import { conversationStateService } from "@core/conversation";
 
 // Tool: get_conversation_state
 server.tool(
@@ -373,37 +139,9 @@ server.tool(
         jid: z.string().describe("Chat JID"),
     },
     async ({ sessionId, jid }) => {
-        const state = await conversationStateService.get(sessionId, jid);
-
-        if (!state) {
-            return {
-                content: [{
-                    type: "text",
-                    text: JSON.stringify({
-                        exists: false,
-                        sessionId,
-                        jid,
-                        context: {},
-                        history: [],
-                    }),
-                }],
-            };
-        }
-
-        return {
-            content: [{
-                type: "text",
-                text: JSON.stringify({
-                    exists: true,
-                    jid: state.jid,
-                    agentId: state.agentId,
-                    context: state.context,
-                    history: state.history,
-                    metadata: state.metadata,
-                    version: state.version,
-                }),
-            }],
-        };
+        return limiter.guard(() =>
+            client.proxyGet(`/v1/states/${encodeURIComponent(sessionId)}/${encodeURIComponent(jid)}`)
+        );
     }
 );
 
@@ -419,23 +157,13 @@ server.tool(
         ttlMinutes: z.number().optional().describe("TTL in minutes"),
     },
     async ({ sessionId, jid, context, agentId, ttlMinutes }) => {
-        const state = await conversationStateService.update(sessionId, jid, {
-            context,
-            agentId,
-            ttlMinutes,
-        });
-
-        return {
-            content: [{
-                type: "text",
-                text: JSON.stringify({
-                    success: true,
-                    jid,
-                    version: state.version,
-                    updatedAt: state.updatedAt,
-                }),
-            }],
-        };
+        return limiter.guard(() =>
+            client.proxyPut(`/v1/states/${encodeURIComponent(sessionId)}/${encodeURIComponent(jid)}`, {
+                context,
+                agentId,
+                ttlMinutes,
+            })
+        );
     }
 );
 
@@ -450,18 +178,11 @@ server.tool(
         content: z.string().describe("Message content"),
     },
     async ({ sessionId, jid, role, content }) => {
-        await conversationStateService.addToHistory(sessionId, jid, role, content);
-
-        return {
-            content: [{
-                type: "text",
-                text: JSON.stringify({
-                    success: true,
-                    jid,
-                    added: { role, content },
-                }),
-            }],
-        };
+        return limiter.guard(() =>
+            client.proxyPut(`/v1/states/${encodeURIComponent(sessionId)}/${encodeURIComponent(jid)}`, {
+                history: [{ role, content, timestamp: new Date().toISOString() }],
+            })
+        );
     }
 );
 
@@ -474,23 +195,14 @@ server.tool(
         jid: z.string().describe("Chat JID"),
     },
     async ({ sessionId, jid }) => {
-        await conversationStateService.clear(sessionId, jid);
-
-        return {
-            content: [{
-                type: "text",
-                text: JSON.stringify({
-                    success: true,
-                    cleared: true,
-                    jid,
-                }),
-            }],
-        };
+        return limiter.guard(() =>
+            client.proxyDelete(`/v1/states/${encodeURIComponent(sessionId)}/${encodeURIComponent(jid)}`)
+        );
     }
 );
 
 // ============================================
-// RESOURCES (Read-only Data Access)
+// RESOURCES (Read-only Data Access — Proxy)
 // ============================================
 
 // Resource: conversation state
@@ -498,12 +210,12 @@ server.resource(
     "state",
     new ResourceTemplate("state://{sessionId}/{jid}", { list: undefined }),
     async (uri, { sessionId, jid }) => {
-        const state = await conversationStateService.get(sessionId as string, jid as string);
+        const result = await client.get(`/v1/states/${encodeURIComponent(sessionId as string)}/${encodeURIComponent(jid as string)}`);
 
         return {
             contents: [{
                 uri: uri.href,
-                text: JSON.stringify(state ?? { exists: false }),
+                text: JSON.stringify(result.success ? result.data : { exists: false }),
                 mimeType: "application/json",
             }],
         };
@@ -515,41 +227,23 @@ server.resource(
     "contacts",
     new ResourceTemplate("contacts://{sessionId}/list", { list: undefined }),
     async (uri, { sessionId }) => {
-        const session = await sessionManager.getSession(sessionId as string);
-        if (!session || !session.isConnected()) {
-            return {
-                contents: [{
-                    uri: uri.href,
-                    text: JSON.stringify({ error: "Session not available" }),
-                    mimeType: "application/json",
-                }],
-            };
-        }
+        const result = await client.get(`/v1/contacts?sessionId=${encodeURIComponent(sessionId as string)}`);
 
-        const contacts = await session.contacts.getContacts();
         return {
             contents: [{
                 uri: uri.href,
-                text: JSON.stringify({
-                    contacts: contacts.map((c) => ({
-                        id: c.id,
-                        name: c.name,
-                        notify: c.notify,
-                    })),
-                }),
+                text: JSON.stringify(result.success ? result.data : { error: "Session not available" }),
                 mimeType: "application/json",
             }],
         };
     }
 );
 
-// Resource: groups list
+// Resource: groups list (placeholder)
 server.resource(
     "groups",
     new ResourceTemplate("groups://{sessionId}/list", { list: undefined }),
-    async (uri, { sessionId }) => {
-        // Groups are fetched via getChats, but for now return empty
-        // This would require additional implementation in Core
+    async (uri) => {
         return {
             contents: [{
                 uri: uri.href,
@@ -568,22 +262,16 @@ server.resource(
 // ============================================
 
 export async function startMcpServer(): Promise<void> {
-    log.info("Starting MCP server on stdio");
-
-    // Set up event forwarding as notifications
-    eventBus.on("message.received", (data) => {
-        // MCP notifications would go here when supported by transport
-        log.debug({ sessionId: data.sessionId, type: data.type }, "Message received (MCP)");
-    });
-
-    eventBus.on("message.status", (data) => {
-        log.debug({ sessionId: data.sessionId, status: data.status }, "Message status (MCP)");
-    });
+    log.info("Starting MCP server on stdio (proxy mode)");
 
     const transport = new StdioServerTransport();
     await server.connect(transport);
 
-    log.info("MCP server connected via stdio");
+    log.info({
+        mode: "proxy",
+        targetApi: process.env.MCP_API_BASE_URL ?? "http://localhost:3000",
+        rateLimitStats: limiter.getStats(),
+    }, "MCP server connected via stdio");
 }
 
 export { server as mcpServer };
