@@ -8,10 +8,32 @@ on:
 
 jobs:
   # ===========================================================================
+  # Lint & Type Check
+  # ===========================================================================
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type check
+        run: bun run --bun tsc --noEmit
+
+  # ===========================================================================
   # Test
   # ===========================================================================
   test:
     runs-on: ubuntu-latest
+    needs: lint
 
     services:
       postgres:
@@ -50,24 +72,41 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Type check
-        run: bun run --bun tsc --noEmit
-
-      - name: Run tests
+      - name: Run all tests
         run: bun test
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/whatsapp_test
           REDIS_HOST: localhost
           REDIS_PORT: 6379
           NODE_ENV: test
+          # MCP Proxy test configuration
+          MCP_API_BASE_URL: http://localhost:3000
+          MCP_API_KEY: test-ci-key
+          MCP_RATE_LIMIT: 30
+
+      - name: Test summary
+        if: always()
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "Run: bun test" >> $GITHUB_STEP_SUMMARY
+          echo "Includes: MCP security, proxy, parity, sanitization, and negative tests" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
-  # Build Docker Image
+  # Build Docker Images
   # ===========================================================================
   build:
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    strategy:
+      matrix:
+        target: [rest, mcp]
+        include:
+          - target: rest
+            tag: whatsapp-server:latest
+          - target: mcp
+            tag: whatsapp-mcp:latest
 
     steps:
       - name: Checkout
@@ -76,11 +115,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Build ${{ matrix.target }} image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: false
-          tags: whatsapp-server:latest
+          target: ${{ matrix.target }}
+          tags: ${{ matrix.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

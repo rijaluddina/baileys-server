@@ -1,11 +1,12 @@
 services:
   # ==========================================================================
-  # WhatsApp Server
+  # WhatsApp REST API Server (main)
   # ==========================================================================
   app:
     build:
       context: .
       dockerfile: Dockerfile
+      target: rest
     container_name: whatsapp-server
     restart: unless-stopped
     ports:
@@ -18,6 +19,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - AUTO_CONNECT_SESSIONS=${AUTO_CONNECT_SESSIONS:-false}
+      - API_KEY_SECRET=${API_KEY_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -29,6 +31,32 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    networks:
+      - whatsapp-network
+
+  # ==========================================================================
+  # MCP Proxy Server (optional — enable when using LLM agents)
+  # ==========================================================================
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: mcp
+    container_name: whatsapp-mcp
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - MCP_API_BASE_URL=http://app:3000
+      - MCP_API_KEY=${MCP_API_KEY:-}
+      - MCP_RATE_LIMIT=${MCP_RATE_LIMIT:-30}
+    depends_on:
+      app:
+        condition: service_healthy
+    profiles:
+      - mcp
+    # stdio transport — use `docker attach` or pipe via agent
+    stdin_open: true
+    tty: false
     networks:
       - whatsapp-network
 
@@ -74,7 +102,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-
 
 networks:
   whatsapp-network:

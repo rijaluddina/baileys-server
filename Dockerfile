@@ -1,5 +1,9 @@
 # =============================================================================
 # Multi-stage Dockerfile for WhatsApp Server
+#
+# Targets:
+#   - rest  (default) → REST API server + Baileys core
+#   - mcp             → MCP proxy server (lightweight, no Baileys)
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -16,7 +20,7 @@ COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 
 # -----------------------------------------------------------------------------
-# Stage 2: Build
+# Stage 2: Build (type check)
 # -----------------------------------------------------------------------------
 FROM oven/bun:1 AS builder
 
@@ -30,9 +34,9 @@ COPY . .
 RUN bun run --bun tsc --noEmit
 
 # -----------------------------------------------------------------------------
-# Stage 3: Production
+# Stage 3a: REST API Server (default)
 # -----------------------------------------------------------------------------
-FROM oven/bun:1-slim AS runner
+FROM oven/bun:1-slim AS rest
 
 WORKDIR /app
 
@@ -63,3 +67,34 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 
 # Start with entrypoint (runs migrations first)
 CMD ["sh", "docker-entrypoint.sh"]
+
+# -----------------------------------------------------------------------------
+# Stage 3b: MCP Proxy Server
+# -----------------------------------------------------------------------------
+FROM oven/bun:1-slim AS mcp
+
+WORKDIR /app
+
+# Don't run as root
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs whatsapp
+USER whatsapp
+
+# Copy only what MCP needs (no drizzle, no migrations)
+COPY --from=builder --chown=whatsapp:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=whatsapp:nodejs /app/src/adapters/mcp ./src/adapters/mcp
+COPY --from=builder --chown=whatsapp:nodejs /app/src/infrastructure/logger.ts ./src/infrastructure/logger.ts
+COPY --from=builder --chown=whatsapp:nodejs /app/src/mcp.ts ./src/mcp.ts
+COPY --from=builder --chown=whatsapp:nodejs /app/package.json ./
+COPY --from=builder --chown=whatsapp:nodejs /app/tsconfig.json ./
+
+# Environment
+ENV NODE_ENV=production
+ENV MCP_API_BASE_URL=http://app:3000
+ENV MCP_API_KEY=
+ENV MCP_RATE_LIMIT=30
+
+# MCP uses stdio transport — no port to expose
+# No health check needed (stdio lifecycle managed by the agent)
+
+CMD ["bun", "run", "src/mcp.ts"]
