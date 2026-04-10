@@ -20,6 +20,7 @@ export interface ApiResult<T = unknown> {
 }
 
 export interface McpToolResult {
+    [x: string]: unknown;
     content: Array<{ type: "text"; text: string }>;
     isError?: boolean;
 }

@@ -82,7 +82,7 @@ export class McpRateLimiter {
      */
     guard<T>(
         handler: () => Promise<T>
-    ): Promise<T | { content: Array<{ type: "text"; text: string }>; isError: true }> {
+    ): Promise<T | { [x: string]: unknown; content: Array<{ type: "text"; text: string }>; isError: true }> {
         const result = this.check();
 
         if (!result.allowed) {
