@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { db } from "@infrastructure/database";
 import { apiKeys, type ApiKey, type NewApiKey } from "@infrastructure/database/schema";
 import { logger } from "@infrastructure/logger";
@@ -115,11 +115,23 @@ export class AuthService {
         const [result] = await db
             .select()
             .from(apiKeys)
-            .where(and(eq(apiKeys.keyHash, keyHash), eq(apiKeys.keyPrefix, keyPrefix)))
+            .where(
+                or(
+                    and(eq(apiKeys.keyHash, keyHash), eq(apiKeys.keyPrefix, keyPrefix)),
+                    and(eq(apiKeys.previousKeyHash, keyHash), eq(apiKeys.previousKeyPrefix, keyPrefix))
+                )
+            )
             .limit(1);
 
         if (!result) {
             return null;
+        }
+
+        // Verify if matched previous key but it's expired
+        if (result.previousKeyHash === keyHash && result.previousKeyPrefix === keyPrefix) {
+            if (result.previousKeyExpiresAt && new Date(result.previousKeyExpiresAt) < new Date()) {
+                return null;
+            }
         }
 
         // Check if active
@@ -192,6 +204,104 @@ export class AuthService {
             rateLimit: r.rateLimit ?? 100,
             active: r.active,
         }));
+    }
+
+    /**
+     * Get API key by ID
+     */
+    async getKeyById(keyId: string): Promise<ApiKeyInfo | null> {
+        const [result] = await db
+            .select()
+            .from(apiKeys)
+            .where(eq(apiKeys.id, keyId))
+            .limit(1);
+
+        if (!result) return null;
+
+        return {
+            id: result.id,
+            name: result.name,
+            role: result.role as Role,
+            sessionIds: (result.sessionIds as string[]) ?? [],
+            rateLimit: result.rateLimit ?? 100,
+            active: result.active,
+        };
+    }
+
+    /**
+     * Update API key properties
+     */
+    async updateKey(keyId: string, updates: Partial<Omit<ApiKeyInfo, "id">>): Promise<ApiKeyInfo | null> {
+        const [result] = await db
+            .update(apiKeys)
+            .set(updates)
+            .where(eq(apiKeys.id, keyId))
+            .returning();
+
+        if (!result) return null;
+
+        return {
+            id: result.id,
+            name: result.name,
+            role: result.role as Role,
+            sessionIds: (result.sessionIds as string[]) ?? [],
+            rateLimit: result.rateLimit ?? 100,
+            active: result.active,
+        };
+    }
+
+    /**
+     * Rotate an API key with an optional grace period
+     */
+    async rotateKey(
+        keyId: string, 
+        options: { immediate?: boolean; gracePeriodHours?: number } = {}
+    ): Promise<{ key: string; info: ApiKeyInfo } | null> {
+        const { immediate = false, gracePeriodHours = 24 } = options;
+        
+        const [currentKey] = await db.select().from(apiKeys).where(eq(apiKeys.id, keyId)).limit(1);
+        if (!currentKey) return null;
+
+        const rawKey = `wsk_${this.generateRandomString(32)}`;
+        const keyHash = await this.hashKey(rawKey);
+        const keyPrefix = rawKey.slice(0, 12);
+        
+        let updateData: any = {
+            keyHash,
+            keyPrefix,
+        };
+
+        if (immediate) {
+            updateData.previousKeyHash = null;
+            updateData.previousKeyPrefix = null;
+            updateData.previousKeyExpiresAt = null;
+        } else {
+            updateData.previousKeyHash = currentKey.keyHash;
+            updateData.previousKeyPrefix = currentKey.keyPrefix;
+            updateData.previousKeyExpiresAt = new Date(Date.now() + gracePeriodHours * 60 * 60 * 1000);
+        }
+
+        const [result] = await db
+            .update(apiKeys)
+            .set(updateData)
+            .where(eq(apiKeys.id, keyId))
+            .returning();
+
+        if (!result) return null;
+
+        this.log.info({ keyId, immediate }, "API key rotated");
+
+        return {
+            key: rawKey,
+            info: {
+                id: result.id,
+                name: result.name,
+                role: result.role as Role,
+                sessionIds: (result.sessionIds as string[]) ?? [],
+                rateLimit: result.rateLimit ?? 100,
+                active: result.active,
+            }
+        };
     }
 
     private async hashKey(key: string): Promise<string> {

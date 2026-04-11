@@ -29,6 +29,13 @@
       "when": 1767880155785,
       "tag": "0003_closed_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775901617266,
+      "tag": "0004_minor_cannonball",
+      "breakpoints": true
     }
   ]
 }

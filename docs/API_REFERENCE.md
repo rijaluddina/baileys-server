@@ -70,6 +70,9 @@ Base URL: `http://localhost:3000`
 |--------|----------|-------------|
 | POST | `/v1/admin/api-keys` | Create API key |
 | GET | `/v1/admin/api-keys` | List API keys |
+| GET | `/v1/admin/api-keys/:id` | Get single API key |
+| PATCH | `/v1/admin/api-keys/:id` | Update API key properties |
+| POST | `/v1/admin/api-keys/:id/rotate` | Rotate API key (Grace period supported) |
 | DELETE | `/v1/admin/api-keys/:id` | Revoke key |
 
 ### Health & Metrics

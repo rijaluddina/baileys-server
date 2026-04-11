@@ -36,6 +36,9 @@ export const apiKeys = pgTable("api_keys", {
     sessionIds: jsonb("session_ids").$type<string[]>().default([]), // Allowed sessions (empty = all)
     rateLimit: integer("rate_limit").default(100), // Requests per minute
     active: boolean("active").notNull().default(true),
+    previousKeyHash: text("previous_key_hash"),
+    previousKeyPrefix: text("previous_key_prefix"),
+    previousKeyExpiresAt: timestamp("previous_key_expires_at"),
     lastUsedAt: timestamp("last_used_at"),
     expiresAt: timestamp("expires_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -16,6 +16,21 @@ const createApiKeySchema = z.object({
     expiresInDays: z.number().int().positive().optional(),
 });
 
+// Update API key schema
+const updateApiKeySchema = z.object({
+    name: z.string().min(1).max(100).optional(),
+    role: z.enum(["viewer", "operator", "admin"]).optional(),
+    sessionIds: z.array(z.string()).optional(),
+    rateLimit: z.number().int().positive().optional(),
+    active: z.boolean().optional(),
+});
+
+// Rotate API key schema
+const rotateApiKeySchema = z.object({
+    immediate: z.boolean().default(false).optional(),
+    gracePeriodHours: z.number().min(0).max(720).default(24).optional(),
+});
+
 // Create new API key (admin only)
 adminRoutes.post(
     "/api-keys",
@@ -66,6 +81,63 @@ adminRoutes.get(
                     rateLimit: k.rateLimit,
                     sessionCount: k.sessionIds.length || "all",
                 })),
+            })
+        );
+    }
+);
+
+// Get single API key (admin only)
+adminRoutes.get(
+    "/api-keys/:id",
+    requirePermission("admin:read"),
+    async (c) => {
+        const { id } = c.req.param();
+        if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "Key ID required"), 400);
+
+        const key = await authService.getKeyById(id);
+        if (!key) return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Key not found"), 404);
+
+        return c.json(successResponse({ key }));
+    }
+);
+
+// Update API key (admin only)
+adminRoutes.patch(
+    "/api-keys/:id",
+    requirePermission("admin:write"),
+    zValidator("json", updateApiKeySchema),
+    async (c) => {
+        const { id } = c.req.param();
+        if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "Key ID required"), 400);
+
+        const updates = c.req.valid("json");
+        const key = await authService.updateKey(id, updates);
+        
+        if (!key) return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Key not found"), 404);
+
+        return c.json(successResponse({ key }));
+    }
+);
+
+// Rotate API key (admin only)
+adminRoutes.post(
+    "/api-keys/:id/rotate",
+    requirePermission("admin:write"),
+    zValidator("json", rotateApiKeySchema),
+    async (c) => {
+        const { id } = c.req.param();
+        if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "Key ID required"), 400);
+
+        const options = c.req.valid("json");
+        const result = await authService.rotateKey(id, options);
+
+        if (!result) return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Key not found"), 404);
+
+        return c.json(
+            successResponse({
+                key: result.key, // Only returned once!
+                info: result.info,
+                message: "Store this new key securely. It will not be shown again.",
             })
         );
     }
