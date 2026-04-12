@@ -10,9 +10,10 @@ export interface AuthContext {
     type: "api-key" | "user";
     id: string; // apiKey.id or user.id
     keyId: string | null; // null if type is "user"
-    organizationId: string | null;
+    organizationId: string | null; // only applies strictly for api-keys scoped to org
     userId: string | null; // same as id if "user"
-    role: Role;
+    globalRole?: "owner" | "standard"; // users only
+    role?: Role; // api-keys or specific org context
     sessionIds: string[]; // for API keys
     rateLimit: number;
     isAuthenticated: boolean;
@@ -61,19 +62,21 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
             const secret = process.env.JWT_SECRET || "default_jwt_secret_change_me_in_production";
             const payload = await verify(token, secret, "HS256");
 
+            const globalRole = payload.globalRole as "owner" | "standard";
+
             authContext = {
                 type: "user",
                 id: payload.sub as string,
                 keyId: null,
-                organizationId: payload.organizationId as string | null,
+                organizationId: null, // Resolves at resource level dynamically
                 userId: payload.sub as string,
-                role: payload.role as Role,
-                sessionIds: [], // users access all sessions in their org
-                rateLimit: 1000, // default high rate limit for users
+                globalRole: globalRole,
+                sessionIds: [], 
+                rateLimit: 1000, 
                 isAuthenticated: true,
-                permissions: authService.getPermissions(payload.role as Role),
+                permissions: globalRole === "owner" ? authService.getPermissions("owner") : [],
             };
-            log.debug({ userId: authContext.id, role: authContext.role }, "JWT Authenticated request");
+            log.debug({ userId: authContext.id, globalRole }, "JWT Authenticated request");
         } catch (err) {
             log.warn("Invalid JWT token");
             return c.json(errorResponse("UNAUTHORIZED", "Invalid or expired JWT token"), 401);
@@ -128,9 +131,9 @@ export function requirePermission(permission: string) {
             return c.json(errorResponse("UNAUTHORIZED", "Authentication required"), 401);
         }
 
-        if (!authService.hasPermission(auth.role, permission)) {
+        if (!auth.permissions.includes(permission)) {
             log.warn(
-                { id: auth.id, role: auth.role, permission, type: auth.type },
+                { id: auth.id, role: auth.role, globalRole: auth.globalRole, permission, type: auth.type },
                 "Permission denied"
             );
             return c.json(

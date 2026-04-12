@@ -9,7 +9,7 @@ Production-grade WhatsApp server built on Bun runtime using BaileysJS.
 - 📨 Message queues (BullMQ/Redis)
 - 🔔 Webhooks with HMAC signing
 - 📊 Prometheus metrics
-- 🔐 Dual Authentication (API Key + JWT) with Multi-Tenancy
+- 🔐 Dual Authentication (API Key + JWT) with Hybrid SaaS (Independent Users + Manual Teams)
 - 💾 Conversation state management
 - 🛡️ Double-layer rate limiting (REST + MCP)
 
@@ -80,8 +80,9 @@ bun run mcp
 |----------|-------------|
 | `/health` | Health check |
 | `/metrics` | Prometheus metrics |
-| `/v1/auth` | Authentication (Login logic) |
-| `/v1/users` | Multi-Tenant User Management |
+| `/v1/auth` | Authentication (Login & Signup) |
+| `/v1/users` | Independent User Management |
+| `/v1/organizations` | Manual Team Management |
 | `/v1/sessions` | Session management |
 | `/v1/messages` | Send messages (text, media via base64 or URL) |
 | `/v1/contacts` | Contact lookup |

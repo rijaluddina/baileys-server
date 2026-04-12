@@ -12,42 +12,35 @@ const createUserSchema = z.object({
     email: z.string().email(),
     name: z.string().min(1).max(100),
     password: z.string().min(6),
-    role: z.enum(["viewer", "operator", "admin", "owner"]).default("viewer"),
+    globalRole: z.enum(["owner", "standard"]).default("standard"),
 });
 
 // Update user schema
 const updateUserSchema = z.object({
     name: z.string().min(1).max(100).optional(),
-    role: z.enum(["viewer", "operator", "admin", "owner"]).optional(),
+    globalRole: z.enum(["owner", "standard"]).optional(),
     password: z.string().min(6).optional(),
 });
 
-// Create new user (owner only)
+// Create new user (system:manage)
 userRoutes.post(
     "/",
-    requirePermission("users:manage"),
+    requirePermission("system:manage"), // only owners should create users directly ignoring signup flow
     zValidator("json", createUserSchema),
     async (c) => {
-        const { email, name, password, role } = c.req.valid("json");
-        const auth = c.get("auth");
-
-        if (!auth || !auth.organizationId) {
-            return c.json(errorResponse(ErrorCodes.UNAUTHORIZED, "Organization ID not bound to your session"), 401);
-        }
+        const { email, name, password, globalRole } = c.req.valid("json");
 
         try {
             const user = await userService.createUser(
-                auth.organizationId,
                 email,
                 password,
                 name,
-                role
+                globalRole
             );
 
             return c.json(successResponse({ user }), 201);
         } catch (error: any) {
-            // Check for duplicate email
-            if (error.code === '23505') { 
+            if (error.message?.includes('UNIQUE constraint failed') || error.code === '23505') { 
                 return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "Email already exists"), 400);
             }
             throw error;
@@ -55,22 +48,20 @@ userRoutes.post(
     }
 );
 
-// List users (owner only)
+// List users (system:manage) - global list
 userRoutes.get(
     "/",
-    requirePermission("users:manage"),
+    requirePermission("system:manage"),
     async (c) => {
-        const auth = c.get("auth");
-        const usersList = await userService.listUsers(auth?.organizationId ?? undefined);
-
+        const usersList = await userService.listUsers();
         return c.json(successResponse({ users: usersList }));
     }
 );
 
-// Get single user (owner only)
+// Get single user (system:manage)
 userRoutes.get(
     "/:id",
-    requirePermission("users:manage"),
+    requirePermission("system:manage"),
     async (c) => {
         const { id } = c.req.param();
         if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "User ID required"), 400);
@@ -78,36 +69,23 @@ userRoutes.get(
         const user = await userService.getUserById(id);
         if (!user) return c.json(errorResponse(ErrorCodes.NOT_FOUND, "User not found"), 404);
 
-        // Ensure user belongs to same org
-        const auth = c.get("auth");
-        if (user.organizationId !== auth?.organizationId) {
-            return c.json(errorResponse(ErrorCodes.NOT_FOUND, "User not found"), 404);
-        }
-
         return c.json(successResponse({ user }));
     }
 );
 
-// Update user (owner only)
+// Update user (system:manage)
 userRoutes.patch(
     "/:id",
-    requirePermission("users:manage"),
+    requirePermission("system:manage"),
     zValidator("json", updateUserSchema),
     async (c) => {
         const { id } = c.req.param();
         if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "User ID required"), 400);
 
-        // Optional verify same org
-        const existingUser = await userService.getUserById(id);
-        const auth = c.get("auth");
-        if (!existingUser || existingUser.organizationId !== auth?.organizationId) {
-            return c.json(errorResponse(ErrorCodes.NOT_FOUND, "User not found"), 404);
-        }
-
         const updates = c.req.valid("json");
         const user = await userService.updateUser(id, {
             name: updates.name,
-            role: updates.role,
+            globalRole: updates.globalRole,
             passwordPlain: updates.password,
         });
 
@@ -117,19 +95,13 @@ userRoutes.patch(
     }
 );
 
-// Delete user (owner only)
+// Delete user (system:manage)
 userRoutes.delete(
     "/:id",
-    requirePermission("users:manage"),
+    requirePermission("system:manage"),
     async (c) => {
         const { id } = c.req.param();
         if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "User ID required"), 400);
-
-        const existingUser = await userService.getUserById(id);
-        const auth = c.get("auth");
-        if (!existingUser || existingUser.organizationId !== auth?.organizationId) {
-            return c.json(errorResponse(ErrorCodes.NOT_FOUND, "User not found"), 404);
-        }
 
         const success = await userService.deleteUser(id);
         

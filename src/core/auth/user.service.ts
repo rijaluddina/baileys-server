@@ -1,6 +1,6 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, count } from "drizzle-orm";
 import { db } from "@infrastructure/database";
-import { users, organizations, type User, type Organization } from "@infrastructure/database/schema";
+import { users, organizations, organizationMembers, type User, type Organization, type OrganizationMember } from "@infrastructure/database/schema";
 import { logger } from "@infrastructure/logger";
 import { type Role, type UserInfo } from "./auth.service";
 
@@ -8,9 +8,17 @@ export class UserService {
     private readonly log = logger.child({ component: "user-service" });
 
     /**
+     * Get total user count to determine if system is pristine
+     */
+    async getUserCount(): Promise<number> {
+        const result = await db.select({ value: count() }).from(users);
+        return result[0]?.value ?? 0;
+    }
+
+    /**
      * Create an organization
      */
-    async createOrganization(name: string): Promise<Organization> {
+    async createOrganization(name: string, ownerUserId?: string): Promise<Organization> {
         const id = crypto.randomUUID();
         const [result] = await db
             .insert(organizations)
@@ -19,6 +27,10 @@ export class UserService {
             
         if (!result) {
             throw new Error("Failed to create organization");
+        }
+
+        if (ownerUserId) {
+            await this.assignUserToOrganization(ownerUserId, result.id, "owner");
         }
 
         this.log.info({ id, name }, "Organization created");
@@ -38,14 +50,44 @@ export class UserService {
     }
 
     /**
-     * Create a new user
+     * Assign user to organization with a role
+     */
+    async assignUserToOrganization(userId: string, organizationId: string, role: Role = "viewer"): Promise<OrganizationMember> {
+        const id = crypto.randomUUID();
+        const [result] = await db
+            .insert(organizationMembers)
+            .values({ id, userId, organizationId, role })
+            .onConflictDoUpdate({
+                target: [organizationMembers.organizationId, organizationMembers.userId],
+                set: { role, updatedAt: new Date() }
+            })
+        if (!result) {
+            throw new Error("Failed to assign user to organization");
+        }
+            
+        return result;
+    }
+    
+    /**
+     * Get user's roles across all their organizations
+     */
+    async getUserOrganizationRoles(userId: string): Promise<Array<{ organizationId: string, role: Role }>> {
+        const results = await db
+            .select({ organizationId: organizationMembers.organizationId, role: organizationMembers.role })
+            .from(organizationMembers)
+            .where(eq(organizationMembers.userId, userId));
+            
+        return results.map(r => ({ organizationId: r.organizationId, role: r.role as Role }));
+    }
+
+    /**
+     * Create a new user autonomously (No team bound)
      */
     async createUser(
-        organizationId: string,
         email: string,
         passwordPlain: string,
         name: string,
-        role: Role = "viewer"
+        globalRole: "owner" | "standard" = "standard"
     ): Promise<UserInfo> {
         const id = crypto.randomUUID();
         const passwordHash = await Bun.password.hash(passwordPlain);
@@ -54,11 +96,10 @@ export class UserService {
             .insert(users)
             .values({
                 id,
-                organizationId,
                 email,
                 name,
                 passwordHash,
-                role,
+                globalRole,
             })
             .returning();
 
@@ -66,14 +107,13 @@ export class UserService {
             throw new Error("Failed to create user");
         }
 
-        this.log.info({ id, email, role, organizationId }, "User created");
+        this.log.info({ id, email, globalRole }, "User created");
 
         return {
             id: result.id,
-            organizationId: result.organizationId,
             email: result.email,
             name: result.name,
-            role: result.role as Role,
+            globalRole: result.globalRole,
         };
     }
 
@@ -98,10 +138,9 @@ export class UserService {
 
         return {
             id: user.id,
-            organizationId: user.organizationId,
             email: user.email,
             name: user.name,
-            role: user.role as Role,
+            globalRole: user.globalRole,
         };
     }
 
@@ -119,29 +158,44 @@ export class UserService {
 
         return {
             id: result.id,
-            organizationId: result.organizationId,
             email: result.email,
             name: result.name,
-            role: result.role as Role,
+            globalRole: result.globalRole,
         };
     }
 
     /**
-     * List all users in an organization
+     * List all users, optionally filtered by an organization
      */
     async listUsers(organizationId?: string): Promise<UserInfo[]> {
-        let query = db.select().from(users);
+        let query;
+
         if (organizationId) {
-            query = query.where(eq(users.organizationId, organizationId)) as any;
+            // Join with organization_members to get users in team
+            query = db.select({
+                id: users.id,
+                email: users.email,
+                name: users.name,
+                globalRole: users.globalRole
+            })
+            .from(users)
+            .innerJoin(organizationMembers, eq(users.id, organizationMembers.userId))
+            .where(eq(organizationMembers.organizationId, organizationId));
+        } else {
+            query = db.select({
+                id: users.id,
+                email: users.email,
+                name: users.name,
+                globalRole: users.globalRole
+            }).from(users);
         }
         
         const results = await query;
         return results.map((r) => ({
             id: r.id,
-            organizationId: r.organizationId,
             email: r.email,
             name: r.name,
-            role: r.role as Role,
+            globalRole: r.globalRole,
         }));
     }
 
@@ -150,13 +204,13 @@ export class UserService {
      */
     async updateUser(id: string, updates: { 
         name?: string; 
-        role?: Role; 
+        globalRole?: "owner" | "standard"; 
         passwordPlain?: string 
     }): Promise<UserInfo | null> {
         const updateData: any = {};
         
         if (updates.name !== undefined) updateData.name = updates.name;
-        if (updates.role !== undefined) updateData.role = updates.role;
+        if (updates.globalRole !== undefined) updateData.globalRole = updates.globalRole;
         if (updates.passwordPlain !== undefined) {
             updateData.passwordHash = await Bun.password.hash(updates.passwordPlain);
         }
@@ -178,10 +232,9 @@ export class UserService {
 
         return {
             id: result.id,
-            organizationId: result.organizationId,
             email: result.email,
             name: result.name,
-            role: result.role as Role,
+            globalRole: result.globalRole,
         };
     }
 

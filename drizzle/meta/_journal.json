@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1767844038998,
-      "tag": "0000_left_kinsey_walden",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1767852899002,
-      "tag": "0001_sour_smiling_tiger",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1767870829844,
-      "tag": "0002_pale_the_professor",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1767880155785,
-      "tag": "0003_closed_jackpot",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1775901617266,
-      "tag": "0004_minor_cannonball",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1775936098231,
-      "tag": "0005_freezing_iron_patriot",
+      "when": 1776029590087,
+      "tag": "0000_boring_malice",
       "breakpoints": true
     }
   ]

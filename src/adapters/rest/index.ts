@@ -14,6 +14,7 @@ import { stateRoutes } from "./routes/states";
 import { metricsRoutes } from "./routes/metrics";
 import { authRoutes } from "./routes/auth";
 import { userRoutes } from "./routes/users";
+import { orgRoutes } from "./routes/organizations";
 import { requestLogger, errorHandler } from "./middleware";
 import { authMiddleware } from "./auth.middleware";
 import { rateLimiter } from "./rate-limiter";
@@ -47,6 +48,7 @@ v1.use("*", rateLimiter());
 
 // Mount routes
 v1.route("/users", userRoutes);
+v1.route("/organizations", orgRoutes);
 v1.route("/sessions", sessionRoutes);
 v1.route("/messages", messageRoutes);
 v1.route("/contacts", contactRoutes);

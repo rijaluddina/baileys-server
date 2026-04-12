@@ -18,10 +18,9 @@ export interface ApiKeyInfo {
 
 export interface UserInfo {
     id: string;
-    organizationId: string | null;
     email: string;
     name: string;
-    role: Role;
+    globalRole: string; // "owner" | "standard"
 }
 
 // Permission matrix
