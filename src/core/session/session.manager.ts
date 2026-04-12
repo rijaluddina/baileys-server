@@ -67,7 +67,7 @@ class SessionManager {
         }
     }
 
-    async createSession(sessionId: string, name?: string): Promise<BaileysService> {
+    async createSession(sessionId: string, name?: string, organizationId: string | null = null): Promise<BaileysService> {
         if (this.instances.has(sessionId)) {
             throw new Error(`Session ${sessionId} already exists`);
         }
@@ -79,6 +79,7 @@ class SessionManager {
                 id: sessionId,
                 name: name || sessionId,
                 status: "created",
+                organizationId,
             })
             .onConflictDoNothing();
 
@@ -86,7 +87,7 @@ class SessionManager {
         this.instances.set(sessionId, service);
         this.instanceMeta.set(sessionId, { startedAt: new Date(), lastActivity: new Date() });
 
-        this.log.info({ sessionId }, "Session created");
+        this.log.info({ sessionId, organizationId }, "Session created");
         return service;
     }
 
@@ -94,10 +95,10 @@ class SessionManager {
         return this.instances.get(sessionId) || null;
     }
 
-    async getOrCreateSession(sessionId: string): Promise<BaileysService> {
+    async getOrCreateSession(sessionId: string, name?: string, organizationId: string | null = null): Promise<BaileysService> {
         let service = this.instances.get(sessionId);
         if (!service) {
-            service = await this.createSession(sessionId);
+            service = await this.createSession(sessionId, name, organizationId);
         }
         return service;
     }
@@ -120,8 +121,12 @@ class SessionManager {
         this.log.info({ sessionId }, "Session destroyed");
     }
 
-    async listSessions(): Promise<SessionInfo[]> {
-        const dbSessions = await db.select().from(sessions);
+    async listSessions(organizationId?: string): Promise<SessionInfo[]> {
+        const query = organizationId 
+            ? db.select().from(sessions).where(eq(sessions.organizationId, organizationId))
+            : db.select().from(sessions);
+            
+        const dbSessions = await query;
         return dbSessions.map((s) => {
             const instance = this.instances.get(s.id);
             const meta = this.instanceMeta.get(s.id);

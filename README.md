@@ -9,7 +9,7 @@ Production-grade WhatsApp server built on Bun runtime using BaileysJS.
 - 📨 Message queues (BullMQ/Redis)
 - 🔔 Webhooks with HMAC signing
 - 📊 Prometheus metrics
-- 🔐 API key authentication with RBAC
+- 🔐 Dual Authentication (API Key + JWT) with Multi-Tenancy
 - 💾 Conversation state management
 - 🛡️ Double-layer rate limiting (REST + MCP)
 
@@ -45,12 +45,12 @@ bun run mcp
 ┌──────────────────────────┐     ┌──────────────────────────┐
 │   Dashboard UI (React)   │     │   LLM Agent (LangGraph)  │
 └──────────┬───────────────┘     └──────────┬───────────────┘
-           │ HTTP                            │ stdio
-           │                    ┌────────────▼──────────────┐
-           │                    │   MCP Server (Proxy)      │
-           │                    │   Rate Limiter → fetch()  │
-           │                    └────────────┬──────────────┘
-           │                                 │ HTTP + X-API-Key
+           │ HTTP (JWT)                     │ stdio
+           │                   ┌────────────▼──────────────┐
+           │                   │   MCP Server (Proxy)      │
+           │                   │   Rate Limiter → fetch()  │
+           │                   └────────────┬──────────────┘
+           │                                │ HTTP + X-API-Key
            └─────────────┬──────────────────┘
                          ▼
            ┌─────────────────────────────┐
@@ -80,6 +80,8 @@ bun run mcp
 |----------|-------------|
 | `/health` | Health check |
 | `/metrics` | Prometheus metrics |
+| `/v1/auth` | Authentication (Login logic) |
+| `/v1/users` | Multi-Tenant User Management |
 | `/v1/sessions` | Session management |
 | `/v1/messages` | Send messages (text, media via base64 or URL) |
 | `/v1/contacts` | Contact lookup |
@@ -101,6 +103,7 @@ bun run mcp
 | `REDIS_PORT` | 6379 | Redis port |
 | `AUTO_CONNECT_SESSIONS` | false | Auto-connect on startup |
 | `API_KEY_SECRET` | - | HMAC secret for API key hashing |
+| `JWT_SECRET` | - | Secret for signing JWT Login tokens |
 | `MCP_API_BASE_URL` | http://localhost:3000 | REST API URL for MCP proxy |
 | `MCP_API_KEY` | - | API key for MCP → REST auth |
 | `MCP_RATE_LIMIT` | 30 | MCP-side rate limit (req/min) |
@@ -112,7 +115,7 @@ src/
 ├── adapters/           # External interfaces
 │   ├── rest/           # REST API (Hono)
 │   │   ├── routes/     # Endpoint handlers
-│   │   ├── auth.middleware.ts
+│   │   ├── auth.middleware.ts # Dual Auth & Multi-Tenancy Middleware
 │   │   ├── rate-limiter.ts
 │   │   └── security.ts
 │   └── mcp/            # MCP server (Proxy)
@@ -121,6 +124,7 @@ src/
 │       └── mcp-rate-limiter.ts # Double-layer rate limit
 ├── core/               # Domain services
 │   ├── baileys/        # WhatsApp connection
+│   ├── auth/           # Identity, Accounts & Key Management
 │   ├── session/        # Session management
 │   ├── messaging/      # Message handling
 │   ├── contact/        # Contact operations

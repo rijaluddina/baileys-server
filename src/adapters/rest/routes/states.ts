@@ -9,7 +9,7 @@ export const stateRoutes = new Hono();
 
 // Update state schema
 const updateStateSchema = z.object({
-    context: z.record(z.unknown()).optional(),
+    context: z.record(z.string(), z.unknown()).optional(),
     history: z
         .array(
             z.object({
@@ -19,7 +19,7 @@ const updateStateSchema = z.object({
             })
         )
         .optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
     agentId: z.string().optional(),
     ttlMinutes: z.number().int().positive().optional(),
 });

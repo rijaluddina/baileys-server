@@ -152,7 +152,7 @@ server.tool(
     {
         sessionId: z.string().describe("The session ID"),
         jid: z.string().describe("Chat JID"),
-        context: z.record(z.unknown()).optional().describe("Context data to merge"),
+        context: z.record(z.string(), z.unknown()).optional().describe("Context data to merge"),
         agentId: z.string().optional().describe("Agent identifier"),
         ttlMinutes: z.number().optional().describe("TTL in minutes"),
     },

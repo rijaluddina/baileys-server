@@ -36,6 +36,13 @@
       "when": 1775901617266,
       "tag": "0004_minor_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775936098231,
+      "tag": "0005_freezing_iron_patriot",
+      "breakpoints": true
     }
   ]
 }

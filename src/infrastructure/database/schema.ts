@@ -1,7 +1,26 @@
 import { pgTable, text, timestamp, jsonb, boolean, integer } from "drizzle-orm/pg-core";
 
+export const organizations = pgTable("organizations", {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const users = pgTable("users", {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    passwordHash: text("password_hash").notNull(),
+    role: text("role").notNull().default("viewer"), // owner, admin, operator, viewer
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const sessions = pgTable("sessions", {
     id: text("id").primaryKey(),
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
     name: text("name"),
     status: text("status").notNull().default("disconnected"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -29,10 +48,12 @@ export const authKeys = pgTable("auth_keys", {
 // API Keys for REST authentication
 export const apiKeys = pgTable("api_keys", {
     id: text("id").primaryKey(), // UUID
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }), // Who created it
     name: text("name").notNull(),
     keyHash: text("key_hash").notNull(), // SHA-256 hash of the key
     keyPrefix: text("key_prefix").notNull(), // First 8 chars for identification
-    role: text("role").notNull().default("operator"), // viewer, operator, admin
+    role: text("role").notNull().default("operator"), // owner, admin, operator, viewer
     sessionIds: jsonb("session_ids").$type<string[]>().default([]), // Allowed sessions (empty = all)
     rateLimit: integer("rate_limit").default(100), // Requests per minute
     active: boolean("active").notNull().default(true),
@@ -45,6 +66,10 @@ export const apiKeys = pgTable("api_keys", {
     createdBy: text("created_by"),
 });
 
+export type Organization = typeof organizations.$inferSelect;
+export type NewOrganization = typeof organizations.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
 export type AuthState = typeof authStates.$inferSelect;
@@ -55,6 +80,7 @@ export type NewApiKey = typeof apiKeys.$inferInsert;
 // Webhooks for event delivery
 export const webhooks = pgTable("webhooks", {
     id: text("id").primaryKey(), // UUID
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     url: text("url").notNull(),
     secret: text("secret").notNull(), // For HMAC signing
@@ -77,6 +103,7 @@ export type NewWebhook = typeof webhooks.$inferInsert;
 // Conversation states for LLM agents
 export const conversationStates = pgTable("conversation_states", {
     id: text("id").primaryKey(), // Composite: sessionId:jid
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
     sessionId: text("session_id").notNull(),
     jid: text("jid").notNull(), // WhatsApp JID
     agentId: text("agent_id"), // Optional agent identifier

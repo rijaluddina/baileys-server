@@ -4,6 +4,17 @@
 
 Base URL: `http://localhost:3000`
 
+### Authentication & Users
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/v1/auth/login` | Login and get JWT Token |
+| POST | `/v1/users` | Create user (owner only) |
+| GET | `/v1/users` | List users in organization |
+| GET | `/v1/users/:id` | Get user |
+| PATCH | `/v1/users/:id` | Update user |
+| DELETE | `/v1/users/:id` | Delete user |
+
 ### Sessions
 
 | Method | Endpoint | Description |
@@ -64,7 +75,7 @@ Base URL: `http://localhost:3000`
 | GET | `/v1/queues/failed` | Failed jobs |
 | POST | `/v1/queues/failed/:queue/:id/retry` | Retry job |
 
-### Admin
+### Admin & Keys
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -74,6 +85,7 @@ Base URL: `http://localhost:3000`
 | PATCH | `/v1/admin/api-keys/:id` | Update API key properties |
 | POST | `/v1/admin/api-keys/:id/rotate` | Rotate API key (Grace period supported) |
 | DELETE | `/v1/admin/api-keys/:id` | Revoke key |
+| GET | `/v1/admin/me` | Get current key/user context |
 
 ### Health & Metrics
 
@@ -85,21 +97,34 @@ Base URL: `http://localhost:3000`
 
 ---
 
-## Authentication
+## Authentication & Multi-Tenancy
 
-All `/v1/*` endpoints require API key:
+The API supports **Dual Authentication** and maps requests mapping to Isolated **Organizations**.
 
+### Dual-Auth Mechanism
+
+You can hit the API using either an **API Key** (for programmatic, machine-to-machine M2M integration), or a **JWT Token** (for Dashboard User interactions).
+
+- **API Key**: Ensure you pass the key under the `X-API-Key` headers.
 ```
 X-API-Key: wsk_xxxxxxxxxxxxx
 ```
 
-### Roles
+- **JWT Token**: Provide the issued session JWT inside the Authorization Header.
+```
+Authorization: Bearer <your-jwt-token>
+```
 
-| Role | Permissions |
-|------|-------------|
-| `viewer` | Read-only access |
-| `operator` | Read + write (send messages, manage state) |
-| `admin` | Full access (create/revoke API keys, manage users) |
+### Roles & Access Matrix
+
+Data access is strict and tied to the `organization_id` property of the invoking token/key.
+
+| Role | Permissions | Available Features |
+|------|-------------|--------------------|
+| `viewer` | Read-only | List data (sessions, chats, contacts) only. |
+| `operator` | Operating | Plus messaging control (Send, Handle States, Sessions Connect). |
+| `admin` | Organization | Plus provisioning capability (Key Creation, Webhooks configs). |
+| `owner` | Ownership | Plus total tenant management (Users CRUD, Global Configurations). |
 
 > **MCP Proxy**: The MCP server authenticates to REST using an `operator`-role API key.
 > See [MCP Architecture](MCP_ARCHITECTURE.md) for setup.

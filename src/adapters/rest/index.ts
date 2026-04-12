@@ -12,6 +12,8 @@ import { queueRoutes } from "./routes/queues";
 import { webhookRoutes } from "./routes/webhooks";
 import { stateRoutes } from "./routes/states";
 import { metricsRoutes } from "./routes/metrics";
+import { authRoutes } from "./routes/auth";
+import { userRoutes } from "./routes/users";
 import { requestLogger, errorHandler } from "./middleware";
 import { authMiddleware } from "./auth.middleware";
 import { rateLimiter } from "./rate-limiter";
@@ -36,11 +38,15 @@ apiRouter.route("/", metricsRoutes);
 // API v1 routes
 const v1 = new Hono();
 
-// Apply auth and rate limiting to v1 routes
+// Auth routes (like login) don't need authMiddleware
+v1.route("/auth", authRoutes);
+
+// Apply auth and rate limiting to rest of v1 routes
 v1.use("*", authMiddleware);
 v1.use("*", rateLimiter());
 
 // Mount routes
+v1.route("/users", userRoutes);
 v1.route("/sessions", sessionRoutes);
 v1.route("/messages", messageRoutes);
 v1.route("/contacts", contactRoutes);

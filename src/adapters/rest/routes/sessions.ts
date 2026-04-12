@@ -12,6 +12,7 @@ sessionRoutes.post(
     zValidator("json", createSessionSchema),
     async (c) => {
         const { sessionId, name } = c.req.valid("json");
+        const auth = c.get("auth");
 
         const existingSession = await sessionManager.getSession(sessionId);
         if (existingSession) {
@@ -21,7 +22,7 @@ sessionRoutes.post(
             );
         }
 
-        const session = await sessionManager.createSession(sessionId, name);
+        const session = await sessionManager.createSession(sessionId, name, auth?.organizationId ?? undefined);
 
         return c.json(
             successResponse({
@@ -35,15 +36,17 @@ sessionRoutes.post(
 
 // List all sessions
 sessionRoutes.get("/", async (c) => {
-    const sessions = await sessionManager.listSessions();
+    const auth = c.get("auth");
+    const sessions = await sessionManager.listSessions(auth?.organizationId ?? undefined);
     return c.json(successResponse({ sessions }));
 });
 
 // Get session by ID
 sessionRoutes.get("/:id", async (c) => {
     const { id } = c.req.param();
+    const auth = c.get("auth");
 
-    const sessions = await sessionManager.listSessions();
+    const sessions = await sessionManager.listSessions(auth?.organizationId ?? undefined);
     const sessionInfo = sessions.find((s) => s.id === id);
 
     if (!sessionInfo) {
@@ -66,6 +69,17 @@ sessionRoutes.get("/:id", async (c) => {
 // Connect session
 sessionRoutes.post("/:id/connect", async (c) => {
     const { id } = c.req.param();
+    const auth = c.get("auth");
+
+    const sessions = await sessionManager.listSessions(auth?.organizationId ?? undefined);
+    const sessionInfo = sessions.find((s) => s.id === id);
+
+    if (!sessionInfo) {
+        return c.json(
+            errorResponse(ErrorCodes.SESSION_NOT_FOUND, "Session not found"),
+            404
+        );
+    }
 
     let service = await sessionManager.getSession(id);
 
@@ -98,15 +112,22 @@ sessionRoutes.post("/:id/connect", async (c) => {
 // Disconnect/delete session
 sessionRoutes.delete("/:id", async (c) => {
     const { id } = c.req.param();
+    const auth = c.get("auth");
 
-    const session = await sessionManager.getSession(id);
-    if (!session) {
+    const sessions = await sessionManager.listSessions(auth?.organizationId ?? undefined);
+    const sessionInfo = sessions.find((s) => s.id === id);
+
+    if (!sessionInfo) {
         return c.json(
             errorResponse(ErrorCodes.SESSION_NOT_FOUND, "Session not found"),
             404
         );
     }
 
+    const session = await sessionManager.getSession(id);
+    // Ignore if missing in memory but allow deletion from DB via manager
+    // if (!session) ... 
+    
     await sessionManager.destroySession(id);
 
     return c.json(successResponse({ sessionId: id, status: "destroyed" }));
@@ -115,6 +136,17 @@ sessionRoutes.delete("/:id", async (c) => {
 // Get QR code (returns latest QR if available)
 sessionRoutes.get("/:id/qr", async (c) => {
     const { id } = c.req.param();
+    const auth = c.get("auth");
+
+    const sessions = await sessionManager.listSessions(auth?.organizationId ?? undefined);
+    const sessionInfo = sessions.find((s) => s.id === id);
+
+    if (!sessionInfo) {
+        return c.json(
+            errorResponse(ErrorCodes.SESSION_NOT_FOUND, "Session not found"),
+            404
+        );
+    }
 
     const session = await sessionManager.getSession(id);
     if (!session) {

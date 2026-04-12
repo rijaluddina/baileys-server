@@ -14,13 +14,13 @@ The MCP (Model Context Protocol) server uses a **Proxy architecture** where all 
 │         MCP Server (bun mcp)         │
 │                                      │
 │  ┌────────────────────────────────┐  │
-│  │  McpRateLimiter (Layer 2)     │  │
-│  │  30 req/min per MCP session   │  │
+│  │  McpRateLimiter (Layer 2)      │  │
+│  │  30 req/min per MCP session    │  │
 │  └──────────────┬─────────────────┘  │
 │                 ▼                    │
 │  ┌────────────────────────────────┐  │
-│  │  McpApiClient                 │  │
-│  │  fetch() + X-API-Key header   │  │
+│  │  McpApiClient                  │  │
+│  │  fetch() + X-API-Key header    │  │
 │  └──────────────┬─────────────────┘  │
 └─────────────────┼────────────────────┘
                   │ HTTP (localhost or remote)
@@ -28,13 +28,13 @@ The MCP (Model Context Protocol) server uses a **Proxy architecture** where all 
 │         REST API (bun start)         │
 │                                      │
 │  ┌────────────────────────────────┐  │
-│  │  Auth Middleware (Layer 1)    │  │
-│  │  API Key + RBAC + Rate Limit  │  │
+│  │  Auth Middleware (Layer 1)     │  │
+│  │  API Key + RBAC + Rate Limit   │  │
 │  └──────────────┬─────────────────┘  │
 │                 ▼                    │
 │  ┌────────────────────────────────┐  │
-│  │  Core Services                │  │
-│  │  Session → Baileys → WhatsApp │  │
+│  │  Core Services                 │  │
+│  │  Session → Baileys → WhatsApp  │  │
 │  └────────────────────────────────┘  │
 └──────────────────────────────────────┘
 ```

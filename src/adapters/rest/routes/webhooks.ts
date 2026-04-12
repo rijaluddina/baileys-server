@@ -33,7 +33,12 @@ webhookRoutes.post(
     zValidator("json", createWebhookSchema),
     async (c) => {
         const data = c.req.valid("json");
-        const result = await webhookService.create(data);
+        const auth = c.get("auth");
+
+        const result = await webhookService.create({
+            ...data,
+            organizationId: auth?.organizationId ?? undefined,
+        });
 
         return c.json(
             successResponse({
@@ -48,7 +53,8 @@ webhookRoutes.post(
 
 // List webhooks
 webhookRoutes.get("/", requirePermission("admin:read"), async (c) => {
-    const webhooks = await webhookService.list();
+    const auth = c.get("auth");
+    const webhooks = await webhookService.list(auth?.organizationId ?? undefined);
 
     return c.json(
         successResponse({
@@ -71,10 +77,12 @@ webhookRoutes.get("/", requirePermission("admin:read"), async (c) => {
 // Get webhook by ID
 webhookRoutes.get("/:id", requirePermission("admin:read"), async (c) => {
     const id = c.req.param("id");
+    const auth = c.get("auth");
+
     if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "ID required"), 400);
     const webhook = await webhookService.get(id);
 
-    if (!webhook) {
+    if (!webhook || (webhook.organizationId !== auth?.organizationId && auth?.organizationId)) {
         return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Webhook not found"), 404);
     }
 
@@ -105,11 +113,13 @@ webhookRoutes.patch(
     zValidator("json", updateWebhookSchema),
     async (c) => {
         const id = c.req.param("id");
+        const auth = c.get("auth");
+
         if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "ID required"), 400);
         const data = c.req.valid("json");
 
         const webhook = await webhookService.get(id);
-        if (!webhook) {
+        if (!webhook || (webhook.organizationId !== auth?.organizationId && auth?.organizationId)) {
             return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Webhook not found"), 404);
         }
 
@@ -121,10 +131,12 @@ webhookRoutes.patch(
 // Delete webhook
 webhookRoutes.delete("/:id", requirePermission("admin:write"), async (c) => {
     const id = c.req.param("id");
+    const auth = c.get("auth");
+
     if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "ID required"), 400);
 
     const webhook = await webhookService.get(id);
-    if (!webhook) {
+    if (!webhook || (webhook.organizationId !== auth?.organizationId && auth?.organizationId)) {
         return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Webhook not found"), 404);
     }
 

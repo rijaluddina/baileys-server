@@ -1,12 +1,14 @@
 import { eq, and, or } from "drizzle-orm";
 import { db } from "@infrastructure/database";
-import { apiKeys, type ApiKey, type NewApiKey } from "@infrastructure/database/schema";
+import { apiKeys, users, organizations, type ApiKey, type NewApiKey, type User, type Organization } from "@infrastructure/database/schema";
 import { logger } from "@infrastructure/logger";
 
-export type Role = "viewer" | "operator" | "admin";
+export type Role = "viewer" | "operator" | "admin" | "owner";
 
 export interface ApiKeyInfo {
     id: string;
+    organizationId: string | null;
+    userId: string | null;
     name: string;
     role: Role;
     sessionIds: string[];
@@ -14,42 +16,41 @@ export interface ApiKeyInfo {
     active: boolean;
 }
 
+export interface UserInfo {
+    id: string;
+    organizationId: string | null;
+    email: string;
+    name: string;
+    role: Role;
+}
+
 // Permission matrix
 const PERMISSIONS: Record<Role, Record<string, boolean>> = {
     viewer: {
-        "sessions:read": true,
-        "messages:read": true,
-        "contacts:read": true,
-        "groups:read": true,
-        "presence:read": true,
+        "data:read": true,
     },
     operator: {
-        "sessions:read": true,
-        "messages:read": true,
-        "messages:write": true,
-        "contacts:read": true,
-        "contacts:write": true,
-        "groups:read": true,
-        "groups:write": true,
-        "presence:read": true,
-        "presence:write": true,
+        "sessions:control": true,
+        "messages:send": true,
+        "data:read": true,
     },
     admin: {
-        "sessions:read": true,
-        "sessions:write": true,
+        "sessions:create": true,
         "sessions:delete": true,
-        "messages:read": true,
-        "messages:write": true,
-        "messages:delete": true,
-        "contacts:read": true,
-        "contacts:write": true,
-        "groups:read": true,
-        "groups:write": true,
-        "groups:delete": true,
-        "presence:read": true,
-        "presence:write": true,
-        "admin:read": true,
-        "admin:write": true,
+        "sessions:control": true,
+        "messages:send": true,
+        "data:read": true,
+        "webhooks:manage": true,
+    },
+    owner: {
+        "users:manage": true,
+        "system:manage": true,
+        "sessions:create": true,
+        "sessions:delete": true,
+        "sessions:control": true,
+        "messages:send": true,
+        "data:read": true,
+        "webhooks:manage": true,
     },
 };
 
@@ -63,6 +64,8 @@ export class AuthService {
         name: string,
         role: Role = "operator",
         options: {
+            organizationId?: string | null;
+            userId?: string | null;
             sessionIds?: string[];
             rateLimit?: number;
             expiresAt?: Date;
@@ -76,6 +79,8 @@ export class AuthService {
 
         await db.insert(apiKeys).values({
             id,
+            organizationId: options.organizationId ?? null,
+            userId: options.userId ?? null,
             name,
             keyHash,
             keyPrefix,
@@ -86,12 +91,14 @@ export class AuthService {
             createdBy: options.createdBy ?? null,
         });
 
-        this.log.info({ id, name, role }, "API key created");
+        this.log.info({ id, name, role, organizationId: options.organizationId }, "API key created");
 
         return {
             key: rawKey, // Only returned once!
             info: {
                 id,
+                organizationId: options.organizationId ?? null,
+                userId: options.userId ?? null,
                 name,
                 role,
                 sessionIds: options.sessionIds ?? [],
@@ -152,6 +159,8 @@ export class AuthService {
 
         return {
             id: result.id,
+            organizationId: result.organizationId,
+            userId: result.userId,
             name: result.name,
             role: result.role as Role,
             sessionIds: (result.sessionIds as string[]) ?? [],
@@ -165,6 +174,13 @@ export class AuthService {
      */
     hasPermission(role: Role, permission: string): boolean {
         return PERMISSIONS[role]?.[permission] ?? false;
+    }
+
+    /**
+     * Get all permissions for a role
+     */
+    getPermissions(role: Role): string[] {
+        return Object.keys(PERMISSIONS[role] || {});
     }
 
     /**
@@ -193,11 +209,18 @@ export class AuthService {
     /**
      * List all API keys (without hashes)
      */
-    async listKeys(): Promise<ApiKeyInfo[]> {
-        const results = await db.select().from(apiKeys);
+    async listKeys(organizationId?: string): Promise<ApiKeyInfo[]> {
+        let query = db.select().from(apiKeys);
+        if (organizationId) {
+            query = query.where(eq(apiKeys.organizationId, organizationId)) as any;
+        }
+        
+        const results = await query;
 
         return results.map((r) => ({
             id: r.id,
+            organizationId: r.organizationId,
+            userId: r.userId,
             name: r.name,
             role: r.role as Role,
             sessionIds: (r.sessionIds as string[]) ?? [],
@@ -220,6 +243,8 @@ export class AuthService {
 
         return {
             id: result.id,
+            organizationId: result.organizationId,
+            userId: result.userId,
             name: result.name,
             role: result.role as Role,
             sessionIds: (result.sessionIds as string[]) ?? [],
@@ -242,6 +267,8 @@ export class AuthService {
 
         return {
             id: result.id,
+            organizationId: result.organizationId,
+            userId: result.userId,
             name: result.name,
             role: result.role as Role,
             sessionIds: (result.sessionIds as string[]) ?? [],
@@ -295,6 +322,8 @@ export class AuthService {
             key: rawKey,
             info: {
                 id: result.id,
+                organizationId: result.organizationId,
+                userId: result.userId,
                 name: result.name,
                 role: result.role as Role,
                 sessionIds: (result.sessionIds as string[]) ?? [],

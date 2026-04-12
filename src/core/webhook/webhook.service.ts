@@ -124,6 +124,7 @@ class WebhookService {
         sessionIds?: string[];
         retries?: number;
         timeoutMs?: number;
+        organizationId?: string | null;
     }): Promise<{ id: string; secret: string }> {
         const id = crypto.randomUUID();
         const secret = `whsec_${crypto.randomUUID().replace(/-/g, "")}`;
@@ -137,9 +138,10 @@ class WebhookService {
             sessionIds: data.sessionIds ?? [],
             retries: data.retries ?? 3,
             timeoutMs: data.timeoutMs ?? 10000,
+            organizationId: data.organizationId ?? null,
         });
 
-        log.info({ id, name: data.name, url: data.url }, "Webhook created");
+        log.info({ id, name: data.name, url: data.url, organizationId: data.organizationId }, "Webhook created");
 
         return { id, secret };
     }
@@ -147,7 +149,10 @@ class WebhookService {
     /**
      * List all webhooks
      */
-    async list(): Promise<Webhook[]> {
+    async list(organizationId?: string): Promise<Webhook[]> {
+        if (organizationId) {
+            return db.select().from(webhooks).where(eq(webhooks.organizationId, organizationId));
+        }
         return db.select().from(webhooks);
     }
 

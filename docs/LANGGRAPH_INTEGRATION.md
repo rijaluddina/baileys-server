@@ -8,7 +8,7 @@ This server provides MCP (Model Context Protocol) tools for LangGraph agents to 
 
 ```
 ┌─────────────────────┐
-│  LangGraph Agent     │
+│  LangGraph Agent    │
 │  (Any server/cloud) │
 └──────────┬──────────┘
            │ stdio / SSH

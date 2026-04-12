@@ -38,7 +38,9 @@ adminRoutes.post(
     zValidator("json", createApiKeySchema),
     async (c) => {
         const { name, role, sessionIds, rateLimit, expiresInDays } = c.req.valid("json");
-        const createdBy = c.get("apiKey")?.id;
+        const auth = c.get("auth");
+        
+        const createdBy = auth?.userId || auth?.keyId || undefined;
 
         const expiresAt = expiresInDays
             ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
@@ -49,6 +51,8 @@ adminRoutes.post(
             rateLimit,
             expiresAt,
             createdBy,
+            organizationId: auth?.organizationId ?? undefined,
+            userId: auth?.userId ?? undefined,
         });
 
         return c.json(
@@ -69,7 +73,8 @@ adminRoutes.get(
     "/api-keys",
     requirePermission("admin:read"),
     async (c) => {
-        const keys = await authService.listKeys();
+        const auth = c.get("auth");
+        const keys = await authService.listKeys(auth?.organizationId ?? undefined);
 
         return c.json(
             successResponse({
@@ -97,6 +102,11 @@ adminRoutes.get(
         const key = await authService.getKeyById(id);
         if (!key) return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Key not found"), 404);
 
+        const auth = c.get("auth");
+        if (key.organizationId !== auth?.organizationId && auth?.organizationId) {
+            return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Key not found"), 404);
+        }
+
         return c.json(successResponse({ key }));
     }
 );
@@ -109,6 +119,12 @@ adminRoutes.patch(
     async (c) => {
         const { id } = c.req.param();
         if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "Key ID required"), 400);
+
+        const auth = c.get("auth");
+        const existingKey = await authService.getKeyById(id);
+        if (!existingKey || (existingKey.organizationId !== auth?.organizationId && auth?.organizationId)) {
+            return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Key not found"), 404);
+        }
 
         const updates = c.req.valid("json");
         const key = await authService.updateKey(id, updates);
@@ -127,6 +143,12 @@ adminRoutes.post(
     async (c) => {
         const { id } = c.req.param();
         if (!id) return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "Key ID required"), 400);
+
+        const auth = c.get("auth");
+        const existingKey = await authService.getKeyById(id);
+        if (!existingKey || (existingKey.organizationId !== auth?.organizationId && auth?.organizationId)) {
+            return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Key not found"), 404);
+        }
 
         const options = c.req.valid("json");
         const result = await authService.rotateKey(id, options);
@@ -149,10 +171,16 @@ adminRoutes.delete(
     requirePermission("admin:write"),
     async (c) => {
         const { id } = c.req.param();
-
         if (!id) {
             return c.json(errorResponse(ErrorCodes.VALIDATION_ERROR, "Key ID required"), 400);
         }
+
+        const auth = c.get("auth");
+        const existingKey = await authService.getKeyById(id);
+        if (!existingKey || (existingKey.organizationId !== auth?.organizationId && auth?.organizationId)) {
+            return c.json(errorResponse(ErrorCodes.NOT_FOUND, "Key not found"), 404);
+        }
+
         await authService.revokeKey(id);
 
         return c.json(successResponse({ id, revoked: true }));
@@ -161,9 +189,10 @@ adminRoutes.delete(
 
 // Get current key info
 adminRoutes.get("/me", async (c) => {
-    const keyInfo = c.get("apiKey");
-
-    if (!keyInfo) {
+    const auth = c.get("auth");
+    
+    // For backwards compatibility and giving current context
+    if (!auth || !auth.isAuthenticated) {
         return c.json(
             successResponse({
                 authenticated: false,
@@ -175,11 +204,10 @@ adminRoutes.get("/me", async (c) => {
     return c.json(
         successResponse({
             authenticated: true,
-            id: keyInfo.id,
-            name: keyInfo.name,
-            role: keyInfo.role,
-            rateLimit: keyInfo.rateLimit,
-            sessionAccess: keyInfo.sessionIds.length === 0 ? "all" : keyInfo.sessionIds,
+            id: auth.userId || auth.keyId,
+            role: auth.role,
+            organizationId: auth.organizationId,
+            permissions: auth.permissions,
         })
     );
 });

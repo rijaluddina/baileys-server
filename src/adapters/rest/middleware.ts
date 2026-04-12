@@ -29,7 +29,7 @@ export async function errorHandler(err: Error, c: Context): Promise<Response> {
             errorResponse(
                 ErrorCodes.VALIDATION_ERROR,
                 "Validation failed",
-                err.errors.map((e) => ({
+                (err as any).errors.map((e: any) => ({
                     path: e.path.join("."),
                     message: e.message,
                 }))
