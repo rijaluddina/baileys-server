@@ -45,18 +45,20 @@ describe("McpApiClient", () => {
             });
 
             expect(result.isError).toBe(true);
-            const parsed = JSON.parse(result.content[0].text);
-            expect(parsed.code).toBe("SESSION_NOT_FOUND");
-            expect(parsed.error).toBe("Session not found");
+            // Error results are now natural-language text for LLM agents
+            const text = result.content[0].text;
+            expect(text).toContain("session");
+            expect(text).not.toContain('{"');
         });
 
         it("should handle missing error details gracefully", () => {
             const result = client.toToolResult({ success: false });
 
             expect(result.isError).toBe(true);
-            const parsed = JSON.parse(result.content[0].text);
-            expect(parsed.code).toBe("INTERNAL_ERROR");
-            expect(parsed.error).toBe("Unknown error");
+            // Should produce a fallback natural-language message
+            const text = result.content[0].text;
+            expect(text).toContain("error");
+            expect(text.length).toBeGreaterThan(10);
         });
     });
 
@@ -248,8 +250,8 @@ describe("REST Error → MCP Error Translation", () => {
         });
 
         expect(result.isError).toBe(true);
-        const parsed = JSON.parse(result.content[0].text);
-        expect(parsed.code).toBe("UNAUTHORIZED");
+        const text = result.content[0].text;
+        expect(text).toContain("Invalid or expired API key");
     });
 
     it("should translate 403 Forbidden", () => {
@@ -259,8 +261,8 @@ describe("REST Error → MCP Error Translation", () => {
         });
 
         expect(result.isError).toBe(true);
-        const parsed = JSON.parse(result.content[0].text);
-        expect(parsed.code).toBe("FORBIDDEN");
+        const text = result.content[0].text;
+        expect(text).toContain("No access to this session");
     });
 
     it("should translate 404 Session Not Found", () => {
@@ -270,8 +272,9 @@ describe("REST Error → MCP Error Translation", () => {
         });
 
         expect(result.isError).toBe(true);
-        const parsed = JSON.parse(result.content[0].text);
-        expect(parsed.code).toBe("SESSION_NOT_FOUND");
+        const text = result.content[0].text;
+        expect(text).toContain("session");
+        expect(text).toContain("not found");
     });
 
     it("should translate 429 Rate Limited", () => {
@@ -281,8 +284,8 @@ describe("REST Error → MCP Error Translation", () => {
         });
 
         expect(result.isError).toBe(true);
-        const parsed = JSON.parse(result.content[0].text);
-        expect(parsed.code).toBe("RATE_LIMITED");
+        const text = result.content[0].text;
+        expect(text.toLowerCase()).toContain("rate limit");
     });
 
     it("should not leak internal details in error messages", () => {
