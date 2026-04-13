@@ -21,11 +21,15 @@ Send a text message to a WhatsApp contact or group.
 **Response:**
 ```json
 {
-  "messageId": "ABCD1234",
+  "status": "queued",
+  "id": "ABCD1234",
   "to": "628xxx@s.whatsapp.net",
   "timestamp": 1704672000
 }
 ```
+
+> The message is queued for delivery. Actual delivery status (delivered/read)
+> is tracked asynchronously via WhatsApp receipt events.
 
 ---
 
@@ -196,7 +200,7 @@ MCP applies a **double-layer rate limit**:
 | Layer 2 (MCP) | 30 req/min | Blocks before HTTP request is made |
 | Layer 1 (REST) | 100 req/min | Blocks at the API server |
 
-When rate limited, tools return:
+When rate limited at Layer 2, the MCP rate limiter returns:
 ```json
 {
   "error": "Rate limit exceeded. Please slow down.",
@@ -204,6 +208,22 @@ When rate limited, tools return:
   "retryAfterMs": 45000
 }
 ```
+
+## Error Handling
+
+When the REST API returns an error, MCP translates it into a **natural-language message** that LLM agents can understand and relay to users:
+
+| Error Code | LLM-Friendly Message |
+|------------|---------------------|
+| `WHATSAPP_DISCONNECTED` | "Failed to send. The WhatsApp connection is currently down. Please inform the user to try again later." |
+| `SESSION_NOT_FOUND` | "WhatsApp session not found. Make sure the session has been created and is active." |
+| `SESSION_NOT_CONNECTED` | "WhatsApp session is not connected yet. Ask the user to scan the QR code first." |
+| `RATE_LIMITED` | "Rate limit reached. Please wait a moment before trying again." |
+| `TIMEOUT` | "The request timed out. The WhatsApp server may be slow — please try again." |
+| `CONNECTION_ERROR` | "Could not reach the WhatsApp server. Please check the service status and try again." |
+
+> **Circuit Breaker**: When WhatsApp is disconnected, the REST API returns `503 WHATSAPP_DISCONNECTED`.
+> MCP translates this to a human-readable message so the LLM agent can inform the user.
 
 ## Security
 

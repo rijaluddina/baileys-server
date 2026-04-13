@@ -1,6 +1,7 @@
 import { apiRouter } from "@adapters/rest";
 import { sessionManager } from "@core/session/session.manager";
 import { webhookService, setupWebhookEventListeners } from "@core/webhook";
+import { setupMessageStatusListeners } from "@core/messaging";
 import { startQueues, stopQueues } from "@infrastructure/queue";
 import { setupMetricsEventListeners } from "@infrastructure/metrics/collector";
 import { logger } from "@infrastructure/logger";
@@ -61,6 +62,9 @@ async function startup(): Promise<void> {
 
     // Setup metrics collection
     setupMetricsEventListeners();
+
+    // Setup message status tracking (Architecture: async status persistence)
+    setupMessageStatusListeners();
 
     // Restore sessions from database
     const autoConnect = process.env.AUTO_CONNECT_SESSIONS === "true";

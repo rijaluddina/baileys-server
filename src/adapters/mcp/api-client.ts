@@ -136,7 +136,33 @@ export class McpApiClient {
     // ── MCP result helpers ──────────────────────────────────────────────
 
     /**
-     * Convert API response to MCP tool result format
+     * Translate technical error codes to natural-language messages for LLM agents.
+     * Architecture ref: Skenario 2, Step 6 — "MCP menerjemahkan error teknis ke bahasa natural"
+     */
+    private translateErrorForLLM(error: ApiResult["error"]): string {
+        const code = error?.code ?? "";
+        const translations: Record<string, string> = {
+            WHATSAPP_DISCONNECTED: "Failed to send. The WhatsApp connection is currently down. Please inform the user to try again later.",
+            CIRCUIT_BREAKER_OPEN: "WhatsApp service is temporarily unavailable. The system detected an outage — please try again in a few minutes.",
+            RATE_LIMITED: "Rate limit reached. Please wait a moment before trying again.",
+            RATE_LIMIT_EXCEEDED: "Rate limit reached. Please wait a moment before trying again.",
+            SESSION_NOT_FOUND: "WhatsApp session not found. Make sure the session has been created and is active.",
+            SESSION_NOT_CONNECTED: "WhatsApp session is not connected yet. Ask the user to scan the QR code first.",
+            CORE_SESSION_DOWN: "WhatsApp session is currently unavailable. Please try again shortly.",
+            CORE_NOT_CONNECTED: "WhatsApp session is not connected. The user needs to scan the QR code.",
+            VALIDATION_ERROR: `Invalid request: ${error?.message ?? "check your parameters and try again."}`,
+            TIMEOUT: "The request timed out. The WhatsApp server may be slow — please try again.",
+            CONNECTION_ERROR: "Could not reach the WhatsApp server. Please check the service status and try again.",
+        };
+
+        return translations[code]
+            ?? `An error occurred: ${error?.message ?? "Unknown error"}. Please try again or contact support.`;
+    }
+
+    /**
+     * Convert API response to MCP tool result format.
+     * Success: returns raw JSON data.
+     * Error: returns LLM-friendly natural-language description.
      */
     toToolResult(apiResult: ApiResult): McpToolResult {
         if (apiResult.success) {
@@ -148,10 +174,7 @@ export class McpApiClient {
         return {
             content: [{
                 type: "text",
-                text: JSON.stringify({
-                    error: apiResult.error?.message ?? "Unknown error",
-                    code: apiResult.error?.code ?? "INTERNAL_ERROR",
-                }),
+                text: this.translateErrorForLLM(apiResult.error),
             }],
             isError: true,
         };

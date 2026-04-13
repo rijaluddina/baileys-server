@@ -88,6 +88,50 @@ const result = await client.proxyPost("/v1/messages/send", { sessionId, to, text
 
 If the LLM agent exceeds 30 requests/minute, it gets blocked at Layer 2 **immediately** — the request never reaches the REST server.
 
+## Circuit Breaker
+
+The REST API wraps all WhatsApp calls with a circuit breaker (`breakers.whatsapp`):
+
+```
+LLM → MCP → REST → CircuitBreaker → Baileys → WhatsApp
+                        │
+                   ┌────┴─────────────────────┐
+                   │  5 failures → OPEN   │
+                   │  60s timeout → TEST  │
+                   │  1 success → CLOSED  │
+                   └──────────────────────────┘
+```
+
+| State | Behavior |
+|-------|----------|
+| `CLOSED` | Normal operation — requests pass through |
+| `OPEN` | Fast-fail — returns `503 WHATSAPP_DISCONNECTED` immediately |
+| `HALF_OPEN` | Testing — allows 1 request to check recovery |
+
+The breaker auto-resets to `CLOSED` when a WhatsApp connection opens (`connection.open` event).
+
+## LLM Error Translation
+
+The MCP API client translates technical error codes into **natural-language messages** that LLM agents can relay to users:
+
+```
+REST Response:  { "error": { "code": "WHATSAPP_DISCONNECTED" } }
+                        │
+                  translateErrorForLLM()
+                        │
+MCP Tool Result: "Failed to send. The WhatsApp connection is
+                  currently down. Please inform the user to
+                  try again later."
+```
+
+| Error Code | LLM Message |
+|------------|-------------|
+| `WHATSAPP_DISCONNECTED` | Failed to send. The WhatsApp connection is currently down. Please inform the user to try again later. |
+| `SESSION_NOT_CONNECTED` | WhatsApp session is not connected yet. Ask the user to scan the QR code first. |
+| `RATE_LIMITED` | Rate limit reached. Please wait a moment before trying again. |
+| `TIMEOUT` | The request timed out. The WhatsApp server may be slow — please try again. |
+| `CONNECTION_ERROR` | Could not reach the WhatsApp server. Please check the service status and try again. |
+
 ## Configuration
 
 ```env
@@ -159,6 +203,6 @@ Set this key as `MCP_API_KEY` in the MCP server's environment.
 ```
 src/adapters/mcp/
 ├── index.ts              # MCP server — tool definitions, proxy handlers
-├── api-client.ts         # HTTP client (fetch + auth + timeout + error handling)
+├── api-client.ts         # HTTP client + error translation for LLM
 └── mcp-rate-limiter.ts   # Layer 2 rate limiter (in-process)
 ```

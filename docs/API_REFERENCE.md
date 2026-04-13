@@ -34,6 +34,14 @@ Base URL: `http://localhost:3000`
 | POST | `/v1/messages/send-media` | Send media (`mediaBase64` or `mediaUrl`, max 5MB) |
 | DELETE | `/v1/messages` | Delete message |
 
+> **Circuit Breaker**: Send endpoints are protected by a WhatsApp circuit breaker.
+> If WhatsApp is disconnected, responses return `503` immediately (fast-fail)
+> with error code `WHATSAPP_DISCONNECTED` instead of waiting for timeout.
+>
+> **Async Status**: Send responses return `{ status: "queued" }`. Actual delivery
+> status (delivered/read) is tracked asynchronously via WhatsApp receipt events
+> and persisted to the `sent_messages` database table.
+
 ### Contacts
 
 | Method | Endpoint | Description |
@@ -135,11 +143,24 @@ Skip auth in development mode (`NODE_ENV=development`).
 
 ## Response Format
 
-**Success:**
+**Success (general):**
 ```json
 {
   "success": true,
   "data": { ... }
+}
+```
+
+**Success (message send):**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "queued",
+    "id": "ABCD1234",
+    "to": "628xxx@s.whatsapp.net",
+    "timestamp": 1704672000
+  }
 }
 ```
 
@@ -153,3 +174,28 @@ Skip auth in development mode (`NODE_ENV=development`).
   }
 }
 ```
+
+**Circuit Breaker Error (503):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "WHATSAPP_DISCONNECTED",
+    "message": "WhatsApp service is currently disconnected"
+  }
+}
+```
+
+## Error Codes
+
+| Code | HTTP | Description |
+|------|------|-------------|
+| `VALIDATION_ERROR` | 400 | Invalid request parameters |
+| `SESSION_NOT_FOUND` | 404 | Session does not exist |
+| `SESSION_NOT_CONNECTED` | 400 | Session exists but not connected to WhatsApp |
+| `WHATSAPP_DISCONNECTED` | 503 | Circuit breaker open — WhatsApp is down |
+| `CIRCUIT_BREAKER_OPEN` | 503 | Generic circuit breaker open |
+| `RATE_LIMITED` | 429 | Too many requests |
+| `UNAUTHORIZED` | 401 | Invalid API key or JWT |
+| `FORBIDDEN` | 403 | Insufficient role permissions |
+| `INTERNAL_ERROR` | 500 | Unexpected server error |

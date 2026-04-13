@@ -3,8 +3,17 @@ import { zValidator } from "@hono/zod-validator";
 import { sessionManager } from "@core/session/session.manager";
 import { successResponse, errorResponse, ErrorCodes } from "../types";
 import { sendTextMessageSchema, sendMediaMessageSchema, deleteMessageSchema } from "../schemas";
+import { breakers } from "@infrastructure/resilience";
+import { AppError, ErrorCode } from "@infrastructure/errors";
 
 export const messageRoutes = new Hono();
+
+/**
+ * Handle circuit breaker errors and return appropriate 503 response
+ */
+function isCircuitBreakerError(err: unknown): boolean {
+    return err instanceof AppError && err.code === ErrorCode.CIRCUIT_BREAKER_OPEN;
+}
 
 // Send text message
 messageRoutes.post(
@@ -28,16 +37,31 @@ messageRoutes.post(
             );
         }
 
-        const result = await session.messaging.sendText(to, text);
+        try {
+            // Wrap with circuit breaker (Architecture: Skenario 2 — fast-fail on WA disconnect)
+            const result = await breakers.whatsapp.execute(() =>
+                session.messaging.sendText(to, text)
+            );
 
-        return c.json(
-            successResponse({
-                messageId: result.messageId,
-                to,
-                timestamp: result.timestamp,
-            }),
-            201
-        );
+            // Architecture: Skenario 1, Step 8 — response with "queued" status
+            return c.json(
+                successResponse({
+                    status: "queued",
+                    id: result.messageId,
+                    to,
+                    timestamp: result.timestamp,
+                }),
+                201
+            );
+        } catch (err) {
+            if (isCircuitBreakerError(err)) {
+                return c.json(
+                    errorResponse(ErrorCodes.WHATSAPP_DISCONNECTED, "WhatsApp service is currently disconnected"),
+                    503
+                );
+            }
+            throw err;
+        }
     }
 );
 
@@ -101,21 +125,36 @@ messageRoutes.post(
             );
         }
 
-        const result = await session.messaging.sendMedia(to, type, buffer, {
-            caption,
-            filename,
-            mimetype,
-        });
+        try {
+            // Wrap with circuit breaker (Architecture: Skenario 2 — fast-fail on WA disconnect)
+            const result = await breakers.whatsapp.execute(() =>
+                session.messaging.sendMedia(to, type, buffer, {
+                    caption,
+                    filename,
+                    mimetype,
+                })
+            );
 
-        return c.json(
-            successResponse({
-                messageId: result.messageId,
-                to,
-                type,
-                timestamp: result.timestamp,
-            }),
-            201
-        );
+            // Architecture: Skenario 1, Step 8 — response with "queued" status
+            return c.json(
+                successResponse({
+                    status: "queued",
+                    id: result.messageId,
+                    to,
+                    type,
+                    timestamp: result.timestamp,
+                }),
+                201
+            );
+        } catch (err) {
+            if (isCircuitBreakerError(err)) {
+                return c.json(
+                    errorResponse(ErrorCodes.WHATSAPP_DISCONNECTED, "WhatsApp service is currently disconnected"),
+                    503
+                );
+            }
+            throw err;
+        }
     }
 );
 

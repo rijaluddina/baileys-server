@@ -133,3 +133,17 @@ export const conversationStates = pgTable("conversation_states", {
 
 export type ConversationState = typeof conversationStates.$inferSelect;
 export type NewConversationState = typeof conversationStates.$inferInsert;
+
+// Sent message tracking for async status updates (queued → sent → delivered → read)
+export const sentMessages = pgTable("sent_messages", {
+    id: text("id").primaryKey(),                   // WhatsApp message ID (msg_xxx)
+    sessionId: text("session_id").notNull(),
+    to: text("to").notNull(),                       // Recipient JID
+    type: text("type").notNull().default("text"),   // text, image, video, audio, document
+    status: text("status").notNull().default("queued"), // queued | sent | delivered | read
+    statusUpdatedAt: timestamp("status_updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SentMessage = typeof sentMessages.$inferSelect;
+export type NewSentMessage = typeof sentMessages.$inferInsert;

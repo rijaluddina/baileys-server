@@ -13,6 +13,7 @@ import { GroupService } from "@core/group";
 import { PresenceService } from "@core/presence";
 import { eventBus } from "@infrastructure/events";
 import { logger } from "@infrastructure/logger";
+import { breakers } from "@infrastructure/resilience";
 import type { Logger } from "pino";
 
 export interface BaileysServiceOptions {
@@ -225,6 +226,10 @@ export class BaileysService {
         } else if (connection === "open") {
             this.log.info("Connection opened successfully");
             this.isConnecting = false;
+
+            // Architecture: Reset circuit breaker when connection is restored
+            breakers.whatsapp.reset();
+
             eventBus.emit("connection.open", { sessionId: this.sessionId });
         }
     }

@@ -89,23 +89,28 @@ MCP_API_KEY=wsk_xxxxx bun run mcp
 
 ## Tool Response Format
 
-All tools return JSON in this format:
+All tools return content in text format.
 
 **Success:**
 ```json
 {
-  "messageId": "...",
+  "status": "queued",
+  "id": "ABCD1234",
   "to": "628xxx@s.whatsapp.net",
-  "timestamp": "2026-01-08T00:00:00.000Z"
+  "timestamp": 1704672000
 }
 ```
 
-**Error:**
-```json
-{
-  "error": "Session not found",
-  "code": "SESSION_NOT_FOUND"
-}
+> Messages are queued for delivery. Status updates (delivered/read) arrive
+> asynchronously via `message.status` events.
+
+**Error (natural language):**
+
+When errors occur, MCP translates technical error codes into natural-language messages:
+
+```
+"Failed to send. The WhatsApp connection is currently down.
+ Please inform the user to try again later."
 ```
 
 **Rate Limited (MCP Layer 2):**
@@ -121,16 +126,17 @@ All tools return JSON in this format:
 
 ## Error Codes
 
-| Code | Description | Source |
-|------|-------------|--------|
-| `SESSION_NOT_FOUND` | Session ID does not exist | REST API |
-| `SESSION_NOT_CONNECTED` | WhatsApp not connected | REST API |
-| `VALIDATION_ERROR` | Invalid parameters | REST API |
-| `UNAUTHORIZED` | Invalid MCP API key | REST API |
-| `FORBIDDEN` | Insufficient permissions | REST API |
-| `RATE_LIMITED` | Too many requests | MCP Layer 2 or REST Layer 1 |
-| `TIMEOUT` | REST API did not respond in 30s | MCP Client |
-| `CONNECTION_ERROR` | Cannot reach REST API | MCP Client |
+| Code | Description | LLM Message |
+|------|-------------|-------------|
+| `SESSION_NOT_FOUND` | Session does not exist | "WhatsApp session not found. Make sure the session has been created and is active." |
+| `SESSION_NOT_CONNECTED` | WhatsApp not connected | "WhatsApp session is not connected yet. Ask the user to scan the QR code first." |
+| `WHATSAPP_DISCONNECTED` | Circuit breaker open | "Failed to send. The WhatsApp connection is currently down." |
+| `VALIDATION_ERROR` | Invalid parameters | "Invalid request: [details]" |
+| `RATE_LIMITED` | Too many requests | "Rate limit reached. Please wait a moment before trying again." |
+| `TIMEOUT` | REST API did not respond in 30s | "The request timed out. The WhatsApp server may be slow." |
+| `CONNECTION_ERROR` | Cannot reach REST API | "Could not reach the WhatsApp server. Please check the service status." |
+| `UNAUTHORIZED` | Invalid MCP API key | Natural-language error message |
+| `FORBIDDEN` | Insufficient permissions | Natural-language error message |
 
 ---
 
@@ -192,8 +198,10 @@ await mcp.call("add_to_history", {
 2. **Use typing indicators** for natural feel
 3. **Persist state** for multi-turn conversations
 4. **Set TTL** on state to auto-cleanup old conversations
-5. **Handle errors gracefully** — check for `RATE_LIMITED` and retry with backoff
-6. **Monitor MCP logs** for `CONNECTION_ERROR` and `TIMEOUT` to detect connectivity issues
+5. **Handle errors gracefully** — MCP returns natural-language error messages, relay them to the user directly
+6. **Monitor `WHATSAPP_DISCONNECTED`** — this means the circuit breaker detected an outage. Inform the user and retry later
+7. **Leverage async status** — use webhooks (`message.status`) to know when messages are delivered/read
+8. **Monitor MCP logs** for `CONNECTION_ERROR` and `TIMEOUT` to detect connectivity issues
 
 ---
 

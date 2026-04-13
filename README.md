@@ -12,6 +12,9 @@ Production-grade WhatsApp server built on Bun runtime using BaileysJS.
 - 🔐 Dual Authentication (API Key + JWT) with Hybrid SaaS (Independent Users + Manual Teams)
 - 💾 Conversation state management
 - 🛡️ Double-layer rate limiting (REST + MCP)
+- ⚡ Circuit breaker for WhatsApp resilience (fast-fail on disconnect)
+- 📬 Async message status tracking (queued → sent → delivered → read)
+- 🗣️ LLM-friendly natural-language error translation
 
 ## Prerequisites
 
@@ -49,6 +52,7 @@ bun run mcp
            │                   ┌────────────▼──────────────┐
            │                   │   MCP Server (Proxy)      │
            │                   │   Rate Limiter → fetch()  │
+           │                   │   Error → NL Translation  │
            │                   └────────────┬──────────────┘
            │                                │ HTTP + X-API-Key
            └─────────────┬──────────────────┘
@@ -56,22 +60,36 @@ bun run mcp
            ┌─────────────────────────────┐
            │   REST API (bun start)      │
            │   Auth → Rate Limit → Core  │
-           │   Core → Baileys → WhatsApp │
+           │   Circuit Breaker → Baileys │
+           │   Status Tracking → DB      │
+           └──────────┬──────────────────┘
+                      ▼
+           ┌─────────────────────────────┐
+           │   WhatsApp (Baileys)        │
+           │   Async: receipt → DB       │
            └─────────────────────────────┘
 ```
 
 > **MCP-as-Proxy**: The MCP server does NOT import Core modules directly.
 > It forwards all tool calls to the REST API via HTTP,
 > so both processes share the same WhatsApp session.
+>
+> **Circuit Breaker**: When WhatsApp disconnects, the circuit breaker opens
+> and immediately returns `503` without waiting for timeout. It auto-resets
+> when the connection is restored.
+>
+> **Async Status**: Sent messages return `{ status: "queued" }` immediately.
+> WhatsApp receipt events update the status in DB (delivered → read) asynchronously.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [API Reference](docs/API_REFERENCE.md) | REST endpoints |
+| [API Reference](docs/API_REFERENCE.md) | REST endpoints & response format |
 | [MCP Tools](docs/MCP_TOOLS.md) | MCP tool reference |
-| [MCP Architecture](docs/MCP_ARCHITECTURE.md) | Proxy architecture & deployment |
+| [MCP Architecture](docs/MCP_ARCHITECTURE.md) | Proxy architecture, circuit breaker & deployment |
 | [LangGraph Integration](docs/LANGGRAPH_INTEGRATION.md) | Agent integration guide |
+| [Architecture Guide](docs/ARCHITECTURE.md) | System architecture & async flows |
 | [Testing Strategy](docs/TESTING_STRATEGY.md) | Test categories & coverage |
 
 ## API Endpoints
@@ -124,21 +142,25 @@ src/
 │       ├── api-client.ts       # HTTP client to REST API
 │       └── mcp-rate-limiter.ts # Double-layer rate limit
 ├── core/               # Domain services
-│   ├── baileys/        # WhatsApp connection
+│   ├── baileys/        # WhatsApp connection + CB sync
 │   ├── auth/           # Identity, Accounts & Key Management
 │   ├── session/        # Session management
-│   ├── messaging/      # Message handling
+│   ├── messaging/      # Message handling + status tracking
+│   │   ├── messaging.service.ts       # Send text/media/forward
+│   │   ├── message-status.service.ts  # DB status persistence
+│   │   └── message-status.listener.ts # EventBus → DB bridge
 │   ├── contact/        # Contact operations
 │   ├── group/          # Group operations
 │   ├── presence/       # Typing indicators
 │   ├── webhook/        # Webhook delivery
 │   └── conversation/   # State management
 └── infrastructure/     # External dependencies
-    ├── database/       # Drizzle ORM + PostgreSQL
+    ├── database/       # Drizzle ORM + PostgreSQL (incl. sent_messages)
     ├── queue/          # BullMQ + Redis
     ├── metrics/        # Prometheus
-    ├── resilience/     # Circuit breaker
-    └── events.ts       # Event bus
+    ├── resilience/     # Circuit breaker (whatsapp, database, redis)
+    ├── errors/         # Error codes & AppError
+    └── events.ts       # Typed event bus
 ```
 
 ## Testing
