@@ -1,8 +1,9 @@
-import { eq, and, count } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { db } from "@infrastructure/database";
-import { users, organizations, organizationMembers, type User, type Organization, type OrganizationMember } from "@infrastructure/database/schema";
+import { users, organizations, organizationMembers, type Organization, type OrganizationMember } from "@infrastructure/database/schema";
 import { logger } from "@infrastructure/logger";
-import { type Role, type UserInfo } from "./auth.service";
+import { type Role } from "./permission.service";
+import { type UserInfo } from "./auth.service";
 
 export class UserService {
     private readonly log = logger.child({ component: "user-service" });

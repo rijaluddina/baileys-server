@@ -1,9 +1,8 @@
 import { eq, and, or } from "drizzle-orm";
 import { db } from "@infrastructure/database";
-import { apiKeys, users, organizations, type ApiKey, type NewApiKey, type User, type Organization } from "@infrastructure/database/schema";
+import { apiKeys, users, organizations } from "@infrastructure/database/schema";
 import { logger } from "@infrastructure/logger";
-
-export type Role = "viewer" | "operator" | "admin" | "owner";
+import { type Role } from "./permission.service";
 
 export interface ApiKeyInfo {
     id: string;
@@ -23,36 +22,6 @@ export interface UserInfo {
     globalRole: string; // "owner" | "standard"
 }
 
-// Permission matrix
-const PERMISSIONS: Record<Role, Record<string, boolean>> = {
-    viewer: {
-        "data:read": true,
-    },
-    operator: {
-        "sessions:control": true,
-        "messages:send": true,
-        "data:read": true,
-    },
-    admin: {
-        "sessions:create": true,
-        "sessions:delete": true,
-        "sessions:control": true,
-        "messages:send": true,
-        "data:read": true,
-        "webhooks:manage": true,
-    },
-    owner: {
-        "users:manage": true,
-        "system:manage": true,
-        "sessions:create": true,
-        "sessions:delete": true,
-        "sessions:control": true,
-        "messages:send": true,
-        "data:read": true,
-        "webhooks:manage": true,
-    },
-};
-
 export class AuthService {
     private readonly log = logger.child({ component: "auth-service" });
 
@@ -71,6 +40,16 @@ export class AuthService {
             createdBy?: string;
         } = {}
     ): Promise<{ key: string; info: ApiKeyInfo }> {
+        // Validate existence to prevent Foreign Key Constraint errors
+        if (options.organizationId) {
+            const [org] = await db.select({ id: organizations.id }).from(organizations).where(eq(organizations.id, options.organizationId)).limit(1);
+            if (!org) throw new Error("Organization not found");
+        }
+        if (options.userId) {
+            const [usr] = await db.select({ id: users.id }).from(users).where(eq(users.id, options.userId)).limit(1);
+            if (!usr) throw new Error("User not found");
+        }
+
         const id = crypto.randomUUID();
         const rawKey = `wsk_${this.generateRandomString(32)}`;
         const keyHash = await this.hashKey(rawKey);
@@ -166,20 +145,6 @@ export class AuthService {
             rateLimit: result.rateLimit ?? 100,
             active: result.active,
         };
-    }
-
-    /**
-     * Check if a role has a specific permission
-     */
-    hasPermission(role: Role, permission: string): boolean {
-        return PERMISSIONS[role]?.[permission] ?? false;
-    }
-
-    /**
-     * Get all permissions for a role
-     */
-    getPermissions(role: Role): string[] {
-        return Object.keys(PERMISSIONS[role] || {});
     }
 
     /**

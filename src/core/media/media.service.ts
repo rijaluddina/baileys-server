@@ -5,7 +5,6 @@ import {
     type AnyMessageContent,
 } from "@whiskeysockets/baileys";
 import { mediaStorage, type StoredMedia } from "@infrastructure/storage";
-import { eventBus } from "@infrastructure/events";
 import { logger } from "@infrastructure/logger";
 
 export type MediaType = "image" | "video" | "audio" | "document" | "sticker";

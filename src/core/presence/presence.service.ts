@@ -1,5 +1,4 @@
 import type { WASocket } from "@whiskeysockets/baileys";
-import { eventBus } from "@infrastructure/events";
 import { logger } from "@infrastructure/logger";
 
 export type PresenceType = "available" | "unavailable" | "composing" | "recording" | "paused";

@@ -1,4 +1,4 @@
-import { eq, and, lt } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { db } from "@infrastructure/database";
 import { conversationStates, type ConversationState } from "@infrastructure/database/schema";
 import { logger } from "@infrastructure/logger";

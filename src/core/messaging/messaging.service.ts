@@ -3,7 +3,6 @@ import {
     type WAMessage,
     type AnyMessageContent,
     type proto,
-    generateWAMessageFromContent,
     getContentType,
 } from "@whiskeysockets/baileys";
 import { MediaService, type MediaType } from "@core/media";

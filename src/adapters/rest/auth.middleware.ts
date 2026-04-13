@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
 import { verify } from "hono/jwt";
-import { authService, type ApiKeyInfo, type Role } from "@core/auth";
+import { authService, permissionService, type ApiKeyInfo, type Role } from "@core/auth";
 import { errorResponse, ErrorCodes } from "./types";
 import { logger } from "@infrastructure/logger";
 
@@ -74,7 +74,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
                 sessionIds: [], 
                 rateLimit: 1000, 
                 isAuthenticated: true,
-                permissions: globalRole === "owner" ? authService.getPermissions("owner") : [],
+                permissions: globalRole === "owner" ? permissionService.getPermissions("owner") : [],
             };
             log.debug({ userId: authContext.id, globalRole }, "JWT Authenticated request");
         } catch (err) {
@@ -100,7 +100,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
             sessionIds: keyInfo.sessionIds,
             rateLimit: keyInfo.rateLimit,
             isAuthenticated: true,
-            permissions: authService.getPermissions(keyInfo.role),
+            permissions: permissionService.getPermissions(keyInfo.role),
         };
         // Backwards compatibility
         c.set("apiKey", keyInfo);

@@ -1,5 +1,4 @@
 import type { WASocket, Contact } from "@whiskeysockets/baileys";
-import { eventBus } from "@infrastructure/events";
 import { logger } from "@infrastructure/logger";
 
 export interface ContactProfile {
