@@ -6,7 +6,83 @@ This document describes the system architecture for asynchronous message handlin
 
 ## Architecture Diagram
 
-See [`arsitektur.mmd`](../arsitektur.mmd) for the full Mermaid sequence diagram.
+Full Mermaid sequence diagram.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant User as Pengguna / Dashboard
+    participant LLM as LLM Agent (LangGraph)
+    participant MCP as MCP Server (Bun)
+    participant REST as REST API (Bun)
+    participant DB as State DB / Webhook
+    participant WA as WhatsApp (Baileys)
+
+    %% =========================================================
+    %% SKENARIO 1: SUCCESS & ASYNCHRONOUS UPDATE
+    %% =========================================================
+    Note over User, WA: SKENARIO 1: Pengiriman Sukses (Sifat Asynchronous)
+    User->>LLM: "Kirim pesan ke bos saya: 'Meeting jam 2'"
+    activate LLM
+    
+    LLM->>MCP: call_tool("send_message", {jid: "628...", text: "..."})
+    activate MCP
+    
+    MCP->>MCP: Cek McpRateLimiter
+    alt Rate Limit OK
+        MCP->>REST: POST /api/messages (X-API-Key)
+        activate REST
+        REST->>REST: Auth Middleware (Validasi API Key)
+        REST->>WA: sock.sendMessage(...)
+        
+        %% Respons langsung bahwa pesan antre (belum tentu terkirim/read)
+        WA-->>REST: Ack (Masuk antrean WA)
+        REST-->>MCP: 200 OK { status: "queued", id: "msg_123" }
+        deactivate REST
+        
+        MCP-->>LLM: { content: "Pesan berhasil masuk antrean (ID: msg_123)" }
+        LLM-->>User: "Baik, pesan sedang diproses dan dikirim ke bos Anda."
+    else Rate Limit Exceeded
+        MCP-->>LLM: Error: "Rate limit tercapai. Tunggu 60 detik."
+    end
+    deactivate MCP
+    deactivate LLM
+
+    %% Proses Asynchronous di background
+    Note over REST, WA: Beberapa saat kemudian (Background Process)
+    WA-->>REST: Event: message-receipt.update (Status: Delivered/Read)
+    activate REST
+    REST->>DB: Update status pesan (msg_123 = delivered)
+    REST->>LLM: [Opsional] Trigger Webhook ke LangGraph
+    deactivate REST
+    Note right of LLM: LLM kini tahu pesan sudah "Read" jika ditanya user lagi.
+
+
+    %% =========================================================
+    %% SKENARIO 2: ERROR HANDLING & CIRCUIT BREAKER
+    %% =========================================================
+    Note over User, WA: SKENARIO 2: Kegagalan Sistem (Circuit Breaker & LLM-Friendly Error)
+    User->>LLM: "Tolong kirim file laporan ke grup tim."
+    activate LLM
+    
+    LLM->>MCP: call_tool("send_document", {groupId: "123@g.us", file: "..."})
+    activate MCP
+    
+    MCP->>REST: POST /api/messages/send-media
+    activate REST
+    
+    Note over REST: Circuit Breaker mendeteksi WA sedang Disconnected!
+    REST->>REST: CircuitBreaker = OPEN (Fast Fail)
+    REST-->>MCP: 503 Service Unavailable { error: "whatsapp_disconnected" }
+    deactivate REST
+    
+    Note over MCP: MCP menerjemahkan error teknis ke bahasa natural
+    MCP-->>LLM: Error: "Gagal mengirim. Koneksi WhatsApp server terputus. Beritahu pengguna untuk mencoba lagi nanti."
+    deactivate MCP
+    
+    LLM-->>User: "Maaf, sistem WhatsApp sedang offline saat ini. Laporan belum bisa dikirim, mohon coba beberapa saat lagi."
+    deactivate LLM
+```
 
 ## Key Flows
 
