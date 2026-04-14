@@ -3,12 +3,14 @@ import { zValidator } from "@hono/zod-validator";
 import { sessionManager } from "@core/session/session.manager";
 import { successResponse, errorResponse, ErrorCodes } from "../types";
 import { createSessionSchema, sessionIdParamSchema } from "../schemas";
+import { requirePermission } from "../auth.middleware";
 
 export const sessionRoutes = new Hono();
 
 // Create a new session
 sessionRoutes.post(
     "/",
+    requirePermission("sessions:create"),
     zValidator("json", createSessionSchema),
     async (c) => {
         const { sessionId, name } = c.req.valid("json");
@@ -35,15 +37,15 @@ sessionRoutes.post(
 );
 
 // List all sessions
-sessionRoutes.get("/", async (c) => {
+sessionRoutes.get("/", requirePermission("data:read"), async (c) => {
     const auth = c.get("auth");
     const sessions = await sessionManager.listSessions(auth?.organizationId ?? undefined);
     return c.json(successResponse({ sessions }));
 });
 
 // Get session by ID
-sessionRoutes.get("/:id", async (c) => {
-    const { id } = c.req.param();
+sessionRoutes.get("/:id", requirePermission("data:read"), async (c) => {
+    const id = c.req.param("id");
     const auth = c.get("auth");
 
     const sessions = await sessionManager.listSessions(auth?.organizationId ?? undefined);
@@ -67,8 +69,8 @@ sessionRoutes.get("/:id", async (c) => {
 });
 
 // Connect session
-sessionRoutes.post("/:id/connect", async (c) => {
-    const { id } = c.req.param();
+sessionRoutes.post("/:id/connect", requirePermission("sessions:control"), async (c) => {
+    const id = c.req.param("id");
     const auth = c.get("auth");
 
     const sessions = await sessionManager.listSessions(auth?.organizationId ?? undefined);
@@ -110,8 +112,8 @@ sessionRoutes.post("/:id/connect", async (c) => {
 });
 
 // Disconnect/delete session
-sessionRoutes.delete("/:id", async (c) => {
-    const { id } = c.req.param();
+sessionRoutes.delete("/:id", requirePermission("sessions:delete"), async (c) => {
+    const id = c.req.param("id");
     const auth = c.get("auth");
 
     const sessions = await sessionManager.listSessions(auth?.organizationId ?? undefined);
@@ -134,8 +136,8 @@ sessionRoutes.delete("/:id", async (c) => {
 });
 
 // Get QR code (returns latest QR if available)
-sessionRoutes.get("/:id/qr", async (c) => {
-    const { id } = c.req.param();
+sessionRoutes.get("/:id/qr", requirePermission("data:read"), async (c) => {
+    const id = c.req.param("id");
     const auth = c.get("auth");
 
     const sessions = await sessionManager.listSessions(auth?.organizationId ?? undefined);
@@ -164,3 +166,4 @@ sessionRoutes.get("/:id/qr", async (c) => {
         })
     );
 });
+

@@ -3,11 +3,12 @@ import { zValidator } from "@hono/zod-validator";
 import { sessionManager } from "@core/session/session.manager";
 import { successResponse, errorResponse, ErrorCodes } from "../types";
 import { contactActionSchema } from "../schemas";
+import { requirePermission } from "../auth.middleware";
 
 export const contactRoutes = new Hono();
 
 // List contacts
-contactRoutes.get("/", async (c) => {
+contactRoutes.get("/", requirePermission("data:read"), async (c) => {
     const sessionId = c.req.query("sessionId");
 
     if (!sessionId) {
@@ -46,8 +47,8 @@ contactRoutes.get("/", async (c) => {
 });
 
 // Get contact profile
-contactRoutes.get("/:jid", async (c) => {
-    const { jid } = c.req.param();
+contactRoutes.get("/:jid", requirePermission("data:read"), async (c) => {
+    const jid = c.req.param("jid");
     const sessionId = c.req.query("sessionId");
 
     if (!sessionId) {
@@ -78,8 +79,8 @@ contactRoutes.get("/:jid", async (c) => {
 });
 
 // Check if number is on WhatsApp
-contactRoutes.get("/:jid/check", async (c) => {
-    const { jid } = c.req.param();
+contactRoutes.get("/:jid/check", requirePermission("data:read"), async (c) => {
+    const jid = c.req.param("jid");
     const sessionId = c.req.query("sessionId");
 
     if (!sessionId) {
@@ -112,9 +113,10 @@ contactRoutes.get("/:jid/check", async (c) => {
 // Block contact
 contactRoutes.post(
     "/:jid/block",
+    requirePermission("sessions:control"),
     zValidator("json", contactActionSchema),
     async (c) => {
-        const { jid } = c.req.param();
+        const jid = c.req.param("jid");
         const { sessionId } = c.req.valid("json");
 
         const session = await sessionManager.getSession(sessionId);
@@ -141,9 +143,10 @@ contactRoutes.post(
 // Unblock contact
 contactRoutes.post(
     "/:jid/unblock",
+    requirePermission("sessions:control"),
     zValidator("json", contactActionSchema),
     async (c) => {
-        const { jid } = c.req.param();
+        const jid = c.req.param("jid");
         const { sessionId } = c.req.valid("json");
 
         const session = await sessionManager.getSession(sessionId);

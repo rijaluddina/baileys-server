@@ -9,10 +9,13 @@ export type Role = "viewer" | "operator" | "admin" | "owner";
 export const PERMISSIONS: Record<Role, Record<string, boolean>> = {
     viewer: {
         "data:read": true,
+        "messages:read": true,
     },
     operator: {
         "sessions:control": true,
         "messages:send": true,
+        "messages:read": true,
+        "messages:write": true,
         "data:read": true,
     },
     admin: {
@@ -20,8 +23,14 @@ export const PERMISSIONS: Record<Role, Record<string, boolean>> = {
         "sessions:delete": true,
         "sessions:control": true,
         "messages:send": true,
+        "messages:read": true,
+        "messages:write": true,
         "data:read": true,
         "webhooks:manage": true,
+        "admin:read": true,
+        "admin:write": true,
+        "queues:read": true,
+        "queues:write": true,
     },
     owner: {
         "users:manage": true,
@@ -30,8 +39,14 @@ export const PERMISSIONS: Record<Role, Record<string, boolean>> = {
         "sessions:delete": true,
         "sessions:control": true,
         "messages:send": true,
+        "messages:read": true,
+        "messages:write": true,
         "data:read": true,
         "webhooks:manage": true,
+        "admin:read": true,
+        "admin:write": true,
+        "queues:read": true,
+        "queues:write": true,
     },
 };
 

@@ -2,6 +2,7 @@ import { eq, and, or } from "drizzle-orm";
 import { db } from "@infrastructure/database";
 import { apiKeys, users, organizations } from "@infrastructure/database/schema";
 import { logger } from "@infrastructure/logger";
+import { audit, AuditActions } from "@infrastructure/logger/audit-logger";
 import { type Role } from "./permission.service";
 
 export interface ApiKeyInfo {
@@ -67,6 +68,15 @@ export class AuthService {
             rateLimit: options.rateLimit ?? 100,
             expiresAt: options.expiresAt ?? null,
             createdBy: options.createdBy ?? null,
+        });
+
+        audit({
+            action: AuditActions.API_KEY_CREATED,
+            actor: options.createdBy ?? "system",
+            resource: "api_key",
+            resourceId: id,
+            result: "success",
+            details: { name, role, organizationId: options.organizationId },
         });
 
         this.log.info({ id, name, role, organizationId: options.organizationId }, "API key created");
@@ -166,6 +176,14 @@ export class AuthService {
             .update(apiKeys)
             .set({ active: false })
             .where(eq(apiKeys.id, keyId));
+
+        audit({
+            action: AuditActions.API_KEY_REVOKED,
+            actor: "system",
+            resource: "api_key",
+            resourceId: keyId,
+            result: "success",
+        });
 
         this.log.info({ keyId }, "API key revoked");
     }
@@ -279,6 +297,15 @@ export class AuthService {
             .returning();
 
         if (!result) return null;
+
+        audit({
+            action: AuditActions.API_KEY_CREATED,
+            actor: "system",
+            resource: "api_key",
+            resourceId: keyId,
+            result: "success",
+            details: { rotated: true, immediate },
+        });
 
         this.log.info({ keyId, immediate }, "API key rotated");
 

@@ -11,7 +11,7 @@ Full Mermaid sequence diagram.
 ```mermaid
 sequenceDiagram
     autonumber
-    participant User as Pengguna / Dashboard
+    participant User as User / Dashboard
     participant LLM as LLM Agent (LangGraph)
     participant MCP as MCP Server (Bun)
     participant REST as REST API (Bun)
@@ -21,8 +21,8 @@ sequenceDiagram
     %% =========================================================
     %% SKENARIO 1: SUCCESS & ASYNCHRONOUS UPDATE
     %% =========================================================
-    Note over User, WA: SKENARIO 1: Pengiriman Sukses (Sifat Asynchronous)
-    User->>LLM: "Kirim pesan ke bos saya: 'Meeting jam 2'"
+    Note over User, WA: SKENARIO 1: Success & Asynchronous Update
+    User->>LLM: "Send message to my boss: 'Meeting at 2'"
     activate LLM
     
     LLM->>MCP: call_tool("send_message", {jid: "628...", text: "..."})
@@ -35,34 +35,34 @@ sequenceDiagram
         REST->>REST: Auth Middleware (Validasi API Key)
         REST->>WA: sock.sendMessage(...)
         
-        %% Respons langsung bahwa pesan antre (belum tentu terkirim/read)
-        WA-->>REST: Ack (Masuk antrean WA)
+        %% Respons message queued (not necessarily delivered/read)
+        WA-->>REST: Ack (Message queued)
         REST-->>MCP: 200 OK { status: "queued", id: "msg_123" }
         deactivate REST
         
-        MCP-->>LLM: { content: "Pesan berhasil masuk antrean (ID: msg_123)" }
-        LLM-->>User: "Baik, pesan sedang diproses dan dikirim ke bos Anda."
+        MCP-->>LLM: { content: "Message queued (ID: msg_123)" }
+        LLM-->>User: "Message queued (ID: msg_123)"
     else Rate Limit Exceeded
-        MCP-->>LLM: Error: "Rate limit tercapai. Tunggu 60 detik."
+        MCP-->>LLM: Error: "Rate limit exceeded. Please try again later."
     end
     deactivate MCP
     deactivate LLM
 
-    %% Proses Asynchronous di background
-    Note over REST, WA: Beberapa saat kemudian (Background Process)
+    %% Proses Asynchronous at background
+    Note over REST, WA: Some time later (Background Process)
     WA-->>REST: Event: message-receipt.update (Status: Delivered/Read)
     activate REST
-    REST->>DB: Update status pesan (msg_123 = delivered)
-    REST->>LLM: [Opsional] Trigger Webhook ke LangGraph
+    REST->>DB: Update message status (msg_123 = delivered)
+    REST->>LLM: [Opsional] Trigger Webhook to LangGraph
     deactivate REST
-    Note right of LLM: LLM kini tahu pesan sudah "Read" jika ditanya user lagi.
+    Note right of LLM: LLM know message status. If user ask about message status, LLM can answer it.
 
 
     %% =========================================================
     %% SKENARIO 2: ERROR HANDLING & CIRCUIT BREAKER
     %% =========================================================
-    Note over User, WA: SKENARIO 2: Kegagalan Sistem (Circuit Breaker & LLM-Friendly Error)
-    User->>LLM: "Tolong kirim file laporan ke grup tim."
+    Note over User, WA: SKENARIO 2: Error Handling & Circuit Breaker
+    User->>LLM: "Please send the report file to the team group."
     activate LLM
     
     LLM->>MCP: call_tool("send_document", {groupId: "123@g.us", file: "..."})
@@ -71,16 +71,16 @@ sequenceDiagram
     MCP->>REST: POST /api/messages/send-media
     activate REST
     
-    Note over REST: Circuit Breaker mendeteksi WA sedang Disconnected!
+    Note over REST: Circuit Breaker detect WhatsApp Disconnected!
     REST->>REST: CircuitBreaker = OPEN (Fast Fail)
     REST-->>MCP: 503 Service Unavailable { error: "whatsapp_disconnected" }
     deactivate REST
     
-    Note over MCP: MCP menerjemahkan error teknis ke bahasa natural
-    MCP-->>LLM: Error: "Gagal mengirim. Koneksi WhatsApp server terputus. Beritahu pengguna untuk mencoba lagi nanti."
+    Note over MCP: MCP translate technical error to natural language
+    MCP-->>LLM: Error: "Failed to send. The WhatsApp connection is currently down. Please inform the user to try again later."
     deactivate MCP
     
-    LLM-->>User: "Maaf, sistem WhatsApp sedang offline saat ini. Laporan belum bisa dikirim, mohon coba beberapa saat lagi."
+    LLM-->>User: "Sorry, WhatsApp is temporarily offline. Please try again in a few minutes."
     deactivate LLM
 ```
 

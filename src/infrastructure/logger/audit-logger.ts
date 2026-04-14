@@ -63,6 +63,21 @@ export const AuditActions = {
     WEBHOOK_DELETED: "webhook.deleted",
     WEBHOOK_UPDATED: "webhook.updated",
 
+    // Group management
+    GROUP_CREATED: "group.created",
+    GROUP_SUBJECT_UPDATED: "group.subject_updated",
+    GROUP_DESCRIPTION_UPDATED: "group.description_updated",
+    GROUP_SETTING_UPDATED: "group.setting_updated",
+    GROUP_PARTICIPANT_ADDED: "group.participant_added",
+    GROUP_PARTICIPANT_REMOVED: "group.participant_removed",
+    GROUP_PARTICIPANT_PROMOTED: "group.participant_promoted",
+    GROUP_PARTICIPANT_DEMOTED: "group.participant_demoted",
+    GROUP_LEFT: "group.left",
+    GROUP_INVITE_REVOKED: "group.invite_revoked",
+    GROUP_JOINED: "group.joined",
+    GROUP_BATCH_ADD: "group.batch_add",
+    GROUP_BATCH_REMOVE: "group.batch_remove",
+
     // Admin operations
     ADMIN_ACTION: "admin.action",
     CONFIG_CHANGED: "config.changed",

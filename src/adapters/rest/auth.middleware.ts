@@ -5,6 +5,7 @@ import { errorResponse, ErrorCodes } from "./types";
 import { logger } from "@infrastructure/logger";
 
 const log = logger.child({ component: "auth-middleware" });
+let devModeWarned = false;
 
 export interface AuthContext {
     type: "api-key" | "user";
@@ -36,10 +37,24 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
     const apiKeyHeader = c.req.header("X-API-Key");
     const authHeader = c.req.header("Authorization");
 
-    // Allow unauthenticated access in development
+    // Allow unauthenticated access in development only
     if (process.env.NODE_ENV === "development" && !apiKeyHeader && !authHeader) {
+        if (!devModeWarned) {
+            log.warn("⚠️  AUTH BYPASSED: Running in development mode without authentication. NEVER use NODE_ENV=development in production!");
+            devModeWarned = true;
+        }
         log.debug("Skipping auth in development mode");
         return next();
+    }
+
+    // Safety check: Ensure NODE_ENV is set in production environments
+    if (!process.env.NODE_ENV || process.env.NODE_ENV === "production") {
+        if (!apiKeyHeader && !authHeader) {
+            return c.json(
+                errorResponse("UNAUTHORIZED", "Authentication required. Use X-API-Key or Authorization Bearer token."),
+                401
+            );
+        }
     }
 
     if (!apiKeyHeader && !authHeader) {
@@ -63,20 +78,47 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
             const payload = await verify(token, secret, "HS256");
 
             const globalRole = payload.globalRole as "owner" | "standard";
+            const userId = payload.sub as string;
+
+            // Resolve org-level permissions when X-Organization-Id header is present
+            let resolvedOrgId: string | null = null;
+            let permissions: string[] = [];
+            let resolvedRole: Role | undefined;
+
+            const orgIdHeader = c.req.header("X-Organization-Id");
+
+            if (globalRole === "owner") {
+                // Owners have all permissions globally
+                permissions = permissionService.getPermissions("owner");
+                resolvedOrgId = orgIdHeader ?? null;
+                resolvedRole = "owner";
+            } else if (orgIdHeader) {
+                // Standard users: resolve permissions from org membership
+                const orgRole = await permissionService.getUserRoleForOrganization(userId, orgIdHeader);
+                if (orgRole) {
+                    permissions = permissionService.getPermissions(orgRole);
+                    resolvedOrgId = orgIdHeader;
+                    resolvedRole = orgRole;
+                } else {
+                    log.warn({ userId, organizationId: orgIdHeader }, "User has no role in requested organization");
+                    // Allow request but with no permissions — guards will reject if needed
+                }
+            }
 
             authContext = {
                 type: "user",
-                id: payload.sub as string,
+                id: userId,
                 keyId: null,
-                organizationId: null, // Resolves at resource level dynamically
-                userId: payload.sub as string,
+                organizationId: resolvedOrgId,
+                userId: userId,
                 globalRole: globalRole,
+                role: resolvedRole,
                 sessionIds: [], 
                 rateLimit: 1000, 
                 isAuthenticated: true,
-                permissions: globalRole === "owner" ? permissionService.getPermissions("owner") : [],
+                permissions,
             };
-            log.debug({ userId: authContext.id, globalRole }, "JWT Authenticated request");
+            log.debug({ userId: authContext.id, globalRole, organizationId: resolvedOrgId, role: resolvedRole }, "JWT Authenticated request");
         } catch (err) {
             log.warn("Invalid JWT token");
             return c.json(errorResponse("UNAUTHORIZED", "Invalid or expired JWT token"), 401);

@@ -3,12 +3,14 @@ import { zValidator } from "@hono/zod-validator";
 import { sessionManager } from "@core/session/session.manager";
 import { successResponse, errorResponse, ErrorCodes } from "../types";
 import { updatePresenceSchema, subscribePresenceSchema } from "../schemas";
+import { requirePermission } from "../auth.middleware";
 
 export const presenceRoutes = new Hono();
 
 // Update own presence
 presenceRoutes.post(
     "/update",
+    requirePermission("sessions:control"),
     zValidator("json", updatePresenceSchema),
     async (c) => {
         const { sessionId, presence } = c.req.valid("json");
@@ -37,9 +39,10 @@ presenceRoutes.post(
 // Subscribe to presence updates for a JID
 presenceRoutes.post(
     "/:jid/subscribe",
+    requirePermission("sessions:control"),
     zValidator("json", subscribePresenceSchema),
     async (c) => {
-        const { jid } = c.req.param();
+        const jid = c.req.param("jid");
         const { sessionId } = c.req.valid("json");
 
         const session = await sessionManager.getSession(sessionId);
@@ -70,8 +73,8 @@ presenceRoutes.post(
 );
 
 // Send typing indicator
-presenceRoutes.post("/:jid/typing", async (c) => {
-    const { jid } = c.req.param();
+presenceRoutes.post("/:jid/typing", requirePermission("sessions:control"), async (c) => {
+    const jid = c.req.param("jid");
     const sessionId = c.req.query("sessionId");
 
     if (!sessionId) {

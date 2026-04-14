@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import { getQueueStats, outgoingQueue, incomingQueue } from "@infrastructure/queue";
 import { successResponse } from "../types";
+import { requirePermission } from "../auth.middleware";
 
 export const queueRoutes = new Hono();
 
 // Get queue stats
-queueRoutes.get("/stats", async (c) => {
+queueRoutes.get("/stats", requirePermission("queues:read"), async (c) => {
     const stats = await getQueueStats();
 
     return c.json(
@@ -26,7 +27,7 @@ queueRoutes.get("/stats", async (c) => {
 });
 
 // Get failed jobs
-queueRoutes.get("/failed", async (c) => {
+queueRoutes.get("/failed", requirePermission("queues:read"), async (c) => {
     const queue = c.req.query("queue") || "outgoing";
 
     const q = queue === "incoming" ? incomingQueue : outgoingQueue;
@@ -48,8 +49,9 @@ queueRoutes.get("/failed", async (c) => {
 });
 
 // Retry a failed job
-queueRoutes.post("/failed/:queue/:id/retry", async (c) => {
-    const { queue, id } = c.req.param();
+queueRoutes.post("/failed/:queue/:id/retry", requirePermission("queues:write"), async (c) => {
+    const queue = c.req.param("queue");
+    const id = c.req.param("id");
 
     const q = queue === "incoming" ? incomingQueue : outgoingQueue;
 
@@ -65,8 +67,9 @@ queueRoutes.post("/failed/:queue/:id/retry", async (c) => {
 });
 
 // Get job by ID
-queueRoutes.get("/jobs/:queue/:id", async (c) => {
-    const { queue, id } = c.req.param();
+queueRoutes.get("/jobs/:queue/:id", requirePermission("queues:read"), async (c) => {
+    const queue = c.req.param("queue");
+    const id = c.req.param("id");
 
     const q = queue === "incoming" ? incomingQueue : outgoingQueue;
     const job = await q.getJob(id);

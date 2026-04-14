@@ -64,6 +64,13 @@ export const groupParticipantsSchema = z.object({
     participants: z.array(z.string().min(1)).min(1),
 });
 
+export const batchParticipantsSchema = z.object({
+    sessionId: z.string().min(1),
+    action: z.enum(["add", "remove"]),
+    participants: z.array(z.string().min(1)).min(1).max(100),
+    delayMs: z.number().int().min(500).max(10000).optional(),
+});
+
 // Presence schemas
 export const updatePresenceSchema = z.object({
     sessionId: z.string().min(1),

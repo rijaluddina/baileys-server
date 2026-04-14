@@ -4,6 +4,7 @@ import { sessions } from "@infrastructure/database/schema";
 import { eq } from "drizzle-orm";
 import { eventBus } from "@infrastructure/events";
 import { logger } from "@infrastructure/logger";
+import { audit, AuditActions } from "@infrastructure/logger/audit-logger";
 
 export type SessionStatus = "created" | "connecting" | "connected" | "qr_pending" | "disconnected";
 
@@ -41,10 +42,26 @@ class SessionManager {
         eventBus.on("connection.open", async (data) => {
             await this.updateSessionStatus(data.sessionId, "connected");
             this.updateActivity(data.sessionId);
+
+            audit({
+                action: AuditActions.SESSION_CONNECTED,
+                actor: "system",
+                resource: "session",
+                resourceId: data.sessionId,
+                result: "success",
+            });
         });
 
         eventBus.on("connection.close", async (data) => {
             await this.updateSessionStatus(data.sessionId, "disconnected");
+
+            audit({
+                action: AuditActions.SESSION_DISCONNECTED,
+                actor: "system",
+                resource: "session",
+                resourceId: data.sessionId,
+                result: "success",
+            });
         });
 
         eventBus.on("qr.update", async (data) => {
@@ -87,6 +104,15 @@ class SessionManager {
         this.instances.set(sessionId, service);
         this.instanceMeta.set(sessionId, { startedAt: new Date(), lastActivity: new Date() });
 
+        audit({
+            action: AuditActions.SESSION_CREATED,
+            actor: "system",
+            resource: "session",
+            resourceId: sessionId,
+            result: "success",
+            details: { organizationId },
+        });
+
         this.log.info({ sessionId, organizationId }, "Session created");
         return service;
     }
@@ -117,6 +143,14 @@ class SessionManager {
 
         // Remove from database
         await db.delete(sessions).where(eq(sessions.id, sessionId));
+
+        audit({
+            action: AuditActions.SESSION_DELETED,
+            actor: "system",
+            resource: "session",
+            resourceId: sessionId,
+            result: "success",
+        });
 
         this.log.info({ sessionId }, "Session destroyed");
     }

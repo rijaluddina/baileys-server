@@ -5,6 +5,7 @@ import { successResponse, errorResponse, ErrorCodes } from "../types";
 import { sendTextMessageSchema, sendMediaMessageSchema, deleteMessageSchema } from "../schemas";
 import { breakers } from "@infrastructure/resilience";
 import { AppError, ErrorCode } from "@infrastructure/errors";
+import { requirePermission } from "../auth.middleware";
 
 export const messageRoutes = new Hono();
 
@@ -18,6 +19,7 @@ function isCircuitBreakerError(err: unknown): boolean {
 // Send text message
 messageRoutes.post(
     "/send",
+    requirePermission("messages:send"),
     zValidator("json", sendTextMessageSchema),
     async (c) => {
         const { sessionId, to, text, quotedMessageId } = c.req.valid("json");
@@ -68,6 +70,7 @@ messageRoutes.post(
 // Send media message
 messageRoutes.post(
     "/send-media",
+    requirePermission("messages:send"),
     zValidator("json", sendMediaMessageSchema),
     async (c) => {
         const { sessionId, to, type, mediaUrl, mediaBase64, caption, filename, mimetype } =
@@ -161,6 +164,7 @@ messageRoutes.post(
 // Delete message
 messageRoutes.delete(
     "/",
+    requirePermission("messages:send"),
     zValidator("json", deleteMessageSchema),
     async (c) => {
         const { sessionId, jid, messageId, fromMe } = c.req.valid("json");

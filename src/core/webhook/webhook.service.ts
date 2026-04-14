@@ -4,6 +4,7 @@ import { webhooks, type Webhook, type NewWebhook } from "@infrastructure/databas
 import { RedisQueue } from "@infrastructure/queue/redis-queue";
 import { eventBus, type EventPayloads } from "@infrastructure/events";
 import { logger } from "@infrastructure/logger";
+import { audit, AuditActions } from "@infrastructure/logger/audit-logger";
 
 const log = logger.child({ component: "webhook-service" });
 
@@ -141,6 +142,15 @@ class WebhookService {
             organizationId: data.organizationId ?? null,
         });
 
+        audit({
+            action: AuditActions.WEBHOOK_CREATED,
+            actor: "system",
+            resource: "webhook",
+            resourceId: id,
+            result: "success",
+            details: { name: data.name, url: data.url, organizationId: data.organizationId },
+        });
+
         log.info({ id, name: data.name, url: data.url, organizationId: data.organizationId }, "Webhook created");
 
         return { id, secret };
@@ -175,6 +185,15 @@ class WebhookService {
             .update(webhooks)
             .set({ ...data, updatedAt: new Date() })
             .where(eq(webhooks.id, id));
+
+        audit({
+            action: AuditActions.WEBHOOK_UPDATED,
+            actor: "system",
+            resource: "webhook",
+            resourceId: id,
+            result: "success",
+            details: data,
+        });
     }
 
     /**
@@ -182,6 +201,15 @@ class WebhookService {
      */
     async delete(id: string): Promise<void> {
         await db.delete(webhooks).where(eq(webhooks.id, id));
+
+        audit({
+            action: AuditActions.WEBHOOK_DELETED,
+            actor: "system",
+            resource: "webhook",
+            resourceId: id,
+            result: "success",
+        });
+
         log.info({ id }, "Webhook deleted");
     }
 
