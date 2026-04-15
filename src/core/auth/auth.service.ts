@@ -247,6 +247,15 @@ export class AuthService {
 
         if (!result) return null;
 
+        audit({
+            action: AuditActions.API_KEY_UPDATED,
+            actor: "system",
+            resource: "api_key",
+            resourceId: keyId,
+            result: "success",
+            details: updates,
+        });
+
         return {
             id: result.id,
             organizationId: result.organizationId,
