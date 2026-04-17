@@ -53,15 +53,15 @@ authRoutes.post("/login", zValidator("json", loginSchema), async (c) => {
 authRoutes.post("/signup", zValidator("json", signupSchema), async (c) => {
     const { email, name, password } = c.req.valid("json");
 
-    // Check if user already exists
-    const existing = await userService.verifyPassword(email, "none"); // hacky check, better to add getUserByEmail
-    // Let's rely on DB unique constraint handling if possible, or just add a check
-    // Actually we don't have getUserByEmail exported in userService yet, 
-    // let's just try to create and catch error.
-
     try {
         const count = await userService.getUserCount();
-        const globalRole = count === 0 ? "owner" : "standard";
+        
+        // Block public registration if the first owner has already been created
+        if (count > 0) {
+            return c.json(errorResponse(ErrorCodes.FORBIDDEN, "Public registration is disabled. Contact administrator."), 403);
+        }
+
+        const globalRole = "owner";
 
         const user = await userService.createUser(email, password, name, globalRole);
 

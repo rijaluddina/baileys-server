@@ -27,6 +27,7 @@ export class BaileysService {
     private readonly log: Logger;
     private saveCreds: (() => Promise<void>) | null = null;
     private isConnecting = false;
+    private reconnectAttempts = 0;
 
     // Services
     private _messagingService: MessagingService | null = null;
@@ -121,7 +122,7 @@ export class BaileysService {
         // Handle message status updates (receipts)
         this.socket.ev.on("message-receipt.update", (updates) => {
             for (const update of updates) {
-                const status = this.mapReceiptToStatus(update.receipt.receiptTimestamp);
+                const status = this.mapReceiptToStatus(update.receipt);
 
                 eventBus.emit("message.status", {
                     sessionId: this.sessionId,
@@ -186,7 +187,10 @@ export class BaileysService {
         });
     }
 
-    private mapReceiptToStatus(timestamp: number | Long | null | undefined): "sent" | "delivered" | "read" | "played" {
+    private mapReceiptToStatus(receipt: any): "sent" | "delivered" | "read" | "played" {
+        if (!receipt) return "delivered";
+        if (receipt.playedTimestamp) return "played";
+        if (receipt.readTimestamp) return "read";
         return "delivered";
     }
 
@@ -220,12 +224,15 @@ export class BaileysService {
             this.isConnecting = false;
 
             if (shouldReconnect) {
-                this.log.info("Attempting reconnection...");
-                setTimeout(() => this.connect(), 3000);
+                this.reconnectAttempts++;
+                const delayMs = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 60000);
+                this.log.info({ attempt: this.reconnectAttempts, delayMs }, "Attempting reconnection...");
+                setTimeout(() => this.connect(), delayMs);
             }
         } else if (connection === "open") {
             this.log.info("Connection opened successfully");
             this.isConnecting = false;
+            this.reconnectAttempts = 0;
 
             // Architecture: Reset circuit breaker when connection is restored
             breakers.whatsapp.reset();

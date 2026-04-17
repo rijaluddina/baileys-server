@@ -5,6 +5,7 @@ import { z } from "zod";
 import { logger } from "@infrastructure/logger";
 import { McpApiClient } from "./api-client";
 import { McpRateLimiter } from "./mcp-rate-limiter";
+import { featureFlagService } from "@core/config/feature-flag.service";
 
 const log = logger.child({ component: "mcp" });
 
@@ -17,6 +18,17 @@ const server = new McpServer({
     name: "whatsapp-server",
     version: "1.0.0",
 });
+
+// Apply Feature Flags dynamically to tool registrations
+const originalTool = server.tool.bind(server);
+server.tool = ((...args: any[]) => {
+    const toolName = args[0] as string;
+    if (featureFlagService.isFeatureEnabled(`mcp:tool:${toolName}`)) {
+        return originalTool(...args);
+    } else {
+        log.info({ tool: toolName }, "MCP tool disabled by feature flag");
+    }
+}) as any;
 
 // ============================================
 // TOOLS (Agent Action Allowlist — Proxy to REST)

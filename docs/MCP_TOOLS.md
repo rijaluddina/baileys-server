@@ -227,6 +227,18 @@ When the REST API returns an error, MCP translates it into a **natural-language 
 
 ## Security
 
+### Feature Flag Service (Flexible Allowlist/Denylist)
+
+MCP devices are dynamically registered using the Feature Flag Service (`src/core/config/feature-flag.service.ts`). This allows administrators to granularly block or allow each device for security and freezes.
+
+These settings can be used programmatically during initialization:
+```ts
+import { featureFlagService } from "@core/config/feature-flag.service";
+
+// Disable a specific tool
+featureFlagService.setFlag("mcp:tool:clear_conversation_state", false);
+```
+
 ### Allowlisted Tools (10)
 
 Only these tools are registered in the MCP server. Everything else is denied.
