@@ -121,9 +121,7 @@ bun run mcp
 | `REDIS_HOST` | localhost | Redis host |
 | `REDIS_PORT` | 6379 | Redis port |
 | `AUTO_CONNECT_SESSIONS` | false | Auto-connect on startup |
-| `API_KEY_SECRET` | - | HMAC secret for API key hashing |
-| `JWT_SECRET` | - | Secret for signing JWT Login tokens |
-| `MCP_API_BASE_URL` | http://localhost:3000 | REST API URL for MCP proxy |
+| `MCP_API_BASE_URL` | <http://localhost:3000> | REST API URL for MCP proxy |
 | `MCP_API_KEY` | - | API key for MCP → REST auth |
 | `MCP_RATE_LIMIT` | 30 | MCP-side rate limit (req/min) |
 
@@ -174,4 +172,4 @@ bun test tests/negative   # Forbidden tools, invalid params
 
 ## License
 
-Private
+[BSD](License)
