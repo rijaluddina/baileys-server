@@ -1,98 +1,245 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Baileys Server — WhatsApp REST API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Comprehensive REST API for WhatsApp built with [NestJS](https://nestjs.com/) and [Baileys](https://github.com/WhiskeySockets/Baileys) (`@whiskeysockets/baileys` v7).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+| Category | Capabilities |
+|----------|-------------|
+| 📱 **Session** | Multi-session, QR code, pairing code, auto-reconnect (exponential backoff) |
+| 💬 **Messaging** | Text, image, video, audio, document, sticker, contact card, location, poll, buttons, list, reaction, edit, delete, forward, star, link preview |
+| 📡 **Status/Stories** | Post text/image/video status to contacts |
+| 👥 **Group** | Create, modify subject/description/settings, add/remove/promote/demote participants, invite codes, join/leave |
+| 📋 **Chat** | Archive, pin, mute, mark read/unread, delete, fetch messages |
+| 📇 **Contact** | Check number existence, profile picture, business profile, block/unblock, update own profile |
+| 🟢 **Presence** | Composing, recording, available, unavailable, subscribe to presence |
+| 🏷️ **Labels** | Assign/remove labels from chats and messages |
+| 🔒 **Privacy** | Last seen, online, profile picture, status, read receipts, groups |
+| 📢 **Newsletter** | Create, follow/unfollow, mute/unmute, update name/description, delete, react, fetch messages |
+| 🔔 **Webhook** | HTTP webhook delivery with HMAC-SHA256 signing |
+| 🔌 **WebSocket** | Real-time events via Socket.IO (QR codes, messages, presence, etc.) |
+| 📚 **Swagger** | Full interactive API documentation at `/docs` |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Quick Start
 
 ```bash
-$ pnpm install
+# Install dependencies
+pnpm install
+
+# Copy environment file
+cp .env.example .env
+
+# Start development server
+pnpm run start:dev
 ```
 
-## Compile and run the project
+The server starts at `http://localhost:3000`:
+- 📚 Swagger docs: `http://localhost:3000/docs`
+- 🔌 WebSocket: `ws://localhost:3000/ws`
 
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3000` | Server port |
+| `API_KEY` | *(empty)* | API key for authentication (empty = open access) |
+| `WEBHOOK_URL` | *(empty)* | Default webhook URL for all sessions |
+| `WEBHOOK_SECRET` | *(empty)* | HMAC secret for webhook signature verification |
+| `SESSION_DATA_DIR` | `./sessions` | Directory for session auth data |
+| `LOG_LEVEL` | `info` | Logging level |
+
+## API Endpoints
+
+### Session Management
+```
+POST   /api/sessions                   # Create session (QR or pairing code)
+GET    /api/sessions                   # List all sessions
+GET    /api/sessions/:id               # Get session status
+DELETE /api/sessions/:id               # Delete session
+POST   /api/sessions/:id/logout        # Logout from WhatsApp
+```
+
+### Messaging
+```
+POST   /api/:sessionId/messages/text          # Send text
+POST   /api/:sessionId/messages/media         # Send media (image/video/audio/doc/sticker)
+POST   /api/:sessionId/messages/contact       # Send contact card
+POST   /api/:sessionId/messages/location      # Send location
+POST   /api/:sessionId/messages/poll          # Send poll
+POST   /api/:sessionId/messages/buttons       # Send buttons
+POST   /api/:sessionId/messages/list          # Send list message
+POST   /api/:sessionId/messages/reaction      # Send reaction emoji
+POST   /api/:sessionId/messages/edit          # Edit message
+POST   /api/:sessionId/messages/delete        # Delete message
+POST   /api/:sessionId/messages/forward       # Forward message
+POST   /api/:sessionId/messages/read          # Mark messages as read
+POST   /api/:sessionId/messages/star          # Star/unstar messages
+POST   /api/:sessionId/messages/status        # Post status/story
+POST   /api/:sessionId/messages/link-preview  # Send link with preview
+```
+
+### Group Management
+```
+POST   /api/:sessionId/groups                           # Create group
+GET    /api/:sessionId/groups                           # Get all groups
+GET    /api/:sessionId/groups/:groupId                  # Get group metadata
+GET    /api/:sessionId/groups/:groupId/invite-code      # Get invite code
+POST   /api/:sessionId/groups/:groupId/revoke-invite    # Revoke invite
+PUT    /api/:sessionId/groups/:groupId/subject          # Update subject
+PUT    /api/:sessionId/groups/:groupId/description      # Update description
+PUT    /api/:sessionId/groups/:groupId/settings         # Update settings
+POST   /api/:sessionId/groups/:groupId/participants     # Add/remove/promote/demote
+DELETE /api/:sessionId/groups/:groupId/leave            # Leave group
+POST   /api/:sessionId/groups/join                      # Join via invite code
+PUT    /api/:sessionId/groups/:groupId/picture          # Update picture
+```
+
+### Chat Operations
+```
+GET    /api/:sessionId/chats                    # Get chats info
+POST   /api/:sessionId/chats/archive            # Archive/unarchive
+POST   /api/:sessionId/chats/pin                # Pin/unpin
+POST   /api/:sessionId/chats/mute               # Mute/unmute
+POST   /api/:sessionId/chats/mark-read          # Mark read/unread
+POST   /api/:sessionId/chats/delete             # Delete chat
+GET    /api/:sessionId/chats/:jid/messages      # Fetch messages
+```
+
+### Contact Management
+```
+GET    /api/:sessionId/contacts                         # Get contacts
+POST   /api/:sessionId/contacts/check                   # Check numbers exist
+GET    /api/:sessionId/contacts/:jid/profile-picture     # Get profile picture
+GET    /api/:sessionId/contacts/:jid/business-profile    # Get business profile
+GET    /api/:sessionId/contacts/:jid/status              # Get about/status
+POST   /api/:sessionId/contacts/:jid/block               # Block contact
+POST   /api/:sessionId/contacts/:jid/unblock             # Unblock contact
+POST   /api/:sessionId/contacts/profile/picture          # Update own picture
+POST   /api/:sessionId/contacts/profile/name             # Update own name
+POST   /api/:sessionId/contacts/profile/status           # Update own about
+```
+
+### Presence, Labels, Privacy, Newsletters
+```
+POST   /api/:sessionId/presence                 # Set presence
+POST   /api/:sessionId/presence/subscribe       # Subscribe to presence
+GET    /api/:sessionId/labels                   # Get labels
+POST   /api/:sessionId/labels/chat/...          # Add/remove chat labels
+POST   /api/:sessionId/labels/message/...       # Add/remove message labels
+GET    /api/:sessionId/privacy                  # Get privacy settings
+POST   /api/:sessionId/privacy/last-seen        # Update last-seen privacy
+POST   /api/:sessionId/privacy/online           # Update online privacy
+POST   /api/:sessionId/privacy/profile-picture  # Update profile picture privacy
+POST   /api/:sessionId/privacy/read-receipts    # Update read receipts privacy
+POST   /api/:sessionId/privacy/groups           # Update groups privacy
+POST   /api/:sessionId/newsletters              # Create newsletter
+GET    /api/:sessionId/newsletters/:jid         # Get newsletter info
+POST   /api/:sessionId/newsletters/follow       # Follow newsletter
+POST   /api/:sessionId/newsletters/unfollow     # Unfollow newsletter
+DELETE /api/:sessionId/newsletters/:jid         # Delete newsletter
+GET    /api/:sessionId/blocklist                # Get blocklist
+GET    /api/:sessionId/device                   # Get device info
+```
+
+## Usage Examples
+
+### Create a Session (QR Code)
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+curl -X POST http://localhost:3000/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId": "my-session"}'
 ```
 
-## Run tests
-
+### Create a Session (Pairing Code)
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+curl -X POST http://localhost:3000/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"sessionId": "my-session", "pairingCode": true, "phoneNumber": "6281234567890"}'
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### Send a Text Message
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+curl -X POST http://localhost:3000/api/my-session/messages/text \
+  -H "Content-Type: application/json" \
+  -d '{"to": "6281234567890", "text": "Hello from Baileys API!"}'
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Send an Image
+```bash
+curl -X POST http://localhost:3000/api/my-session/messages/media \
+  -H "Content-Type: application/json" \
+  -d '{"to": "6281234567890", "type": "image", "media": "https://example.com/image.jpg", "caption": "Check this out!"}'
+```
 
-## Resources
+### Send a Poll
+```bash
+curl -X POST http://localhost:3000/api/my-session/messages/poll \
+  -H "Content-Type: application/json" \
+  -d '{"to": "6281234567890", "name": "Favorite color?", "options": [{"name": "Red"}, {"name": "Blue"}, {"name": "Green"}], "selectableCount": 1}'
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### Check if Numbers Exist on WhatsApp
+```bash
+curl -X POST http://localhost:3000/api/my-session/contacts/check \
+  -H "Content-Type: application/json" \
+  -d '{"numbers": ["6281234567890", "6289876543210"]}'
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## WebSocket Events
 
-## Support
+Connect to `ws://localhost:3000/ws` using Socket.IO to receive real-time events:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+| Event | Description |
+|-------|-------------|
+| `qr` | QR code generated (base64 data URL) |
+| `pairing-code` | Pairing code generated |
+| `connected` | Session connected successfully |
+| `logged-out` | Session logged out |
+| `baileys-event` | All Baileys events (messages, presence, etc.) |
 
-## Stay in touch
+## Webhook Payload
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```json
+{
+  "sessionId": "my-session",
+  "event": "messages.upsert",
+  "data": { ... },
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+```
+
+If `WEBHOOK_SECRET` is set, each request includes an `x-webhook-signature` header with HMAC-SHA256 signature.
+
+## Project Structure
+
+```
+src/
+├── main.ts                    # Bootstrap + Swagger
+├── app.module.ts              # Root module
+├── common/
+│   ├── guards/                # API key authentication
+│   ├── interceptors/          # Response transform
+│   ├── filters/               # Exception handling
+│   └── decorators/            # Public route decorator
+├── session/                   # Session management (core)
+├── messaging/                 # All message types
+├── group/                     # Group management
+├── chat/                      # Chat operations
+├── contact/                   # Contact management
+├── misc/                      # Presence, labels, privacy, newsletters
+└── webhook/                   # Webhook delivery
+```
+
+## Tech Stack
+
+- **Runtime**: Node.js
+- **Framework**: NestJS 11
+- **WhatsApp**: @whiskeysockets/baileys v7
+- **Docs**: Swagger/OpenAPI
+- **WebSocket**: Socket.IO
+- **Validation**: class-validator + class-transformer
+- **Package Manager**: pnpm
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+[BSD-3-Clause](LICENSE)

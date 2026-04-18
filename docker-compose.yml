@@ -1,0 +1,68 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: baileys-server
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://baileys:baileys@postgres:5432/baileys_server
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - baileys-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: baileys-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: baileys
+      POSTGRES_PASSWORD: baileys
+      POSTGRES_DB: baileys_server
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U baileys -d baileys_server" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - baileys-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: baileys-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - baileys-net
+
+volumes:
+  postgres_data:
+  redis_data:
+
+
+networks:
+  baileys-net:
+    driver: bridge

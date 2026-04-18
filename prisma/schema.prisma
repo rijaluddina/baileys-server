@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Session {
+  id         String   @id
+  status     String   @default("close")
+  webhookUrl String?  @map("webhook_url")
+  userJid    String?  @map("user_jid")
+  userName   String?  @map("user_name")
+  retryCount Int      @default(0) @map("retry_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  authCredentials AuthCredential[]
+  messages        Message[]
+  contacts        Contact[]
+  chats           Chat[]
+  webhookLogs     WebhookLog[]
+
+  @@map("sessions")
+}
+
+model AuthCredential {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  key       String
+  value     String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, key])
+  @@index([sessionId])
+  @@map("auth_credentials")
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  remoteJid   String   @map("remote_jid")
+  messageId   String   @map("message_id")
+  fromMe      Boolean  @default(false) @map("from_me")
+  participant String?
+  pushName    String?  @map("push_name")
+  messageType String?  @map("message_type")
+  content     Json
+  timestamp   DateTime
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, remoteJid, messageId])
+  @@index([sessionId, remoteJid])
+  @@index([sessionId, timestamp])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  jid       String
+  name      String?
+  notify    String?
+  imgUrl    String?  @map("img_url")
+  status    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, jid])
+  @@index([sessionId])
+  @@map("contacts")
+}
+
+model Chat {
+  id                    String   @id @default(cuid())
+  sessionId             String   @map("session_id")
+  jid                   String
+  name                  String?
+  conversationTimestamp BigInt?  @map("conversation_timestamp")
+  unreadCount           Int      @default(0) @map("unread_count")
+  archived              Boolean  @default(false)
+  pinned                Boolean  @default(false)
+  muted                 Boolean  @default(false)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, jid])
+  @@index([sessionId])
+  @@map("chats")
+}
+
+model WebhookLog {
+  id         String   @id @default(cuid())
+  sessionId  String   @map("session_id")
+  event      String
+  url        String
+  payload    Json
+  statusCode Int?     @map("status_code")
+  response   String?  @db.Text
+  attempts   Int      @default(1)
+  success    Boolean  @default(false)
+  error      String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@index([success])
+  @@map("webhook_logs")
+}
