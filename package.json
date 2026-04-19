@@ -1,10 +1,35 @@
 {
   "name": "baileys-server",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
-  "private": true,
-  "license": "UNLICENSED",
+  "description": "A comprehensive and robust WhatsApp REST API Gateway built with NestJS and Baileys",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rijaluddina/baileys-server.git"
+  },
+  "keywords": [
+    "whatsapp-api",
+    "whatsapp-gateway",
+    "baileys",
+    "whiskeysockets",
+    "nestjs-whatsapp",
+    "whatsapp-rest-api",
+    "whatsapp-bot",
+    "whatsapp-web-api",
+    "multi-session",
+    "webhooks",
+    "socket-io",
+    "automation",
+    "whatsapp-server"
+  ],
+  "author": {
+    "name": "mohammad rijaluddin alazmi",
+    "email": "me@rjlddna.org"
+  },
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/rijaluddina/baileys-server/issues"
+  },
+  "homepage": "https://github.com/rijaluddina/baileys-server#readme",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
