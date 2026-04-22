@@ -51,6 +51,13 @@ export class ContactService {
     }
   }
 
+  async updateBusinessProfile(sessionId: string, dto: import('./dto/contact.dto.js').UpdateBusinessProfileDto) {
+    const socket = this.sessionService.getSocket(sessionId);
+    // Note: Baileys has a typo in the method name (updateBussinesProfile)
+    await socket.updateBussinesProfile(dto);
+    return { status: 'updated' };
+  }
+
   async getStatus(sessionId: string, jid: string) {
     const socket = this.sessionService.getSocket(sessionId);
     try {

@@ -6,6 +6,7 @@ import {
   UpdateProfilePictureDto,
   UpdateProfileNameDto,
   UpdateProfileStatusDto,
+  UpdateBusinessProfileDto,
 } from './dto/contact.dto.js';
 
 @ApiTags('Contact')
@@ -55,6 +56,13 @@ export class ContactController {
   @ApiParam({ name: 'jid' })
   getBusinessProfile(@Param('sessionId') sessionId: string, @Param('jid') jid: string) {
     return this.contactService.getBusinessProfile(sessionId, jid);
+  }
+
+  @Post('profile/business-profile')
+  @ApiOperation({ summary: 'Update own business profile (requires business account)' })
+  @ApiParam({ name: 'sessionId' })
+  updateBusinessProfile(@Param('sessionId') sessionId: string, @Body() dto: UpdateBusinessProfileDto) {
+    return this.contactService.updateBusinessProfile(sessionId, dto);
   }
 
   @Get(':jid/status')

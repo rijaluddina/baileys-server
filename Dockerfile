@@ -1,27 +1,28 @@
-# Stage 1: Base
-FROM oven/bun:1-alpine AS base
+# Stage 1: Build
+FROM node:22-alpine AS builder
+
 WORKDIR /app
 
-# Stage 2: Dependencies
-FROM base AS install
-COPY package.json bun.lockb ./
-RUN bun install --frozen-lockfile
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Stage 3: Builder
-FROM base AS builder
-COPY --from=install /app/node_modules ./node_modules
 COPY . .
-RUN bunx prisma generate && bun run build
+RUN npx prisma generate
+RUN npm run build
 
-# Stage 4: Production
-FROM base AS release
-COPY --from=install /app/node_modules ./node_modules
+# Stage 2: Production
+FROM node:22-alpine AS production
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
-COPY package.json .
 
-# Bun is already on PATH in oven/bun image
+RUN npx prisma generate
+
 EXPOSE 3000
 
-# Run migrations and then start
-CMD ["sh", "-c", "bunx prisma migrate deploy && bun dist/src/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main.js"]

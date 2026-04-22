@@ -46,3 +46,26 @@ export class UpdateProfileStatusDto {
   @IsNotEmpty()
   status!: string;
 }
+
+export class UpdateBusinessProfileDto {
+  @ApiPropertyOptional({ example: '123 Main St' })
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @ApiPropertyOptional({ example: ['https://example.com'] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  websites?: string[];
+
+  @ApiPropertyOptional({ example: 'contact@example.com' })
+  @IsString()
+  @IsOptional()
+  email?: string;
+
+  @ApiPropertyOptional({ example: 'We are a great business' })
+  @IsString()
+  @IsOptional()
+  description?: string;
+}

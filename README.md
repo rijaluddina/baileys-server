@@ -24,13 +24,16 @@ Comprehensive REST API for WhatsApp built with [NestJS](https://nestjs.com/) and
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 
 # Copy environment file
 cp .env.example .env
 
+# Migrate database
+bunx --bun prisma migrate dev --name init
+
 # Start development server
-pnpm run start:dev
+bun run start:dev
 ```
 
 The server starts at `http://localhost:3000`:
@@ -45,7 +48,10 @@ The server starts at `http://localhost:3000`:
 | `API_KEY` | *(empty)* | API key for authentication (empty = open access) |
 | `WEBHOOK_URL` | *(empty)* | Default webhook URL for all sessions |
 | `WEBHOOK_SECRET` | *(empty)* | HMAC secret for webhook signature verification |
-| `SESSION_DATA_DIR` | `./sessions` | Directory for session auth data |
+| `DATABASE_URL` | *(empty)* | Database URL |
+| `REDIS_HOST` | `localhost` | Redis host |
+| `REDIS_PORT` | `6379` | Redis port |
+| `REDIS_PASSWORD` | *(empty)* | Redis password |
 | `LOG_LEVEL` | `info` | Logging level |
 
 ## API Endpoints
@@ -111,6 +117,7 @@ GET    /api/:sessionId/contacts                         # Get contacts
 POST   /api/:sessionId/contacts/check                   # Check numbers exist
 GET    /api/:sessionId/contacts/:jid/profile-picture     # Get profile picture
 GET    /api/:sessionId/contacts/:jid/business-profile    # Get business profile
+POST   /api/:sessionId/contacts/profile/business-profile # Update own business profile
 GET    /api/:sessionId/contacts/:jid/status              # Get about/status
 POST   /api/:sessionId/contacts/:jid/block               # Block contact
 POST   /api/:sessionId/contacts/:jid/unblock             # Unblock contact
@@ -232,13 +239,15 @@ src/
 
 ## Tech Stack
 
-- **Runtime**: Node.js
+- **Runtime**: Bun v1.3
 - **Framework**: NestJS 11
 - **WhatsApp**: @whiskeysockets/baileys v7
+- **Database**: PostgreSQL + Prisma ORM
+- **Redis**: Redis for caching
 - **Docs**: Swagger/OpenAPI
 - **WebSocket**: Socket.IO
 - **Validation**: class-validator + class-transformer
-- **Package Manager**: pnpm
+- **Package Manager**: bun
 
 ## License
 
