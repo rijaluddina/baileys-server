@@ -25,7 +25,7 @@
     "name": "mohammad rijaluddin alazmi",
     "email": "me@rjlddna.org"
   },
-  "license": "BSD-3-Clause",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/rijaluddina/baileys-server/issues"
   },
@@ -33,15 +33,16 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start": "bun src/main.ts",
+    "start:dev": "bun --watch src/main.ts",
+    "start:debug": "bun --inspect src/main.ts",
+    "start:prod": "bun dist/src/main.js",
+    "start:bun": "bun src/main.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "bun test ./test/app.e2e-spec.ts",
+    "test:watch": "bun test --watch ./test/app.e2e-spec.ts",
     "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:debug": "bun test --inspect-brk ./test/app.e2e-spec.ts",
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
