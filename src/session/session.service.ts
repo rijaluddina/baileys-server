@@ -45,7 +45,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     private readonly eventEmitter: EventEmitter2,
     private readonly prisma: PrismaService,
     private readonly queueService: QueueService,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     // Schedule the daily message cleanup
@@ -66,7 +66,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       await this.prisma.session.update({
         where: { id },
         data: { status: 'close' },
-      }).catch(() => {});
+      }).catch(() => { });
     }
     this.sessions.clear();
   }
@@ -97,7 +97,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
         await this.prisma.session.update({
           where: { id: dbSession.id },
           data: { status: 'close' },
-        }).catch(() => {});
+        }).catch(() => { });
       }
     }
   }
@@ -123,22 +123,19 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     sessionId: string,
     options: { webhookUrl?: string; pairingCode?: boolean; phoneNumber?: string } = {},
   ) {
+    // Ensure clean state: delete existing session data if it exists
     if (this.sessions.has(sessionId)) {
       throw new ConflictException(`Session "${sessionId}" already exists`);
     }
 
-    // Upsert session record in DB
-    await this.prisma.session.upsert({
-      where: { id: sessionId },
-      create: {
+    await this.prisma.session.delete({ where: { id: sessionId } }).catch(() => { });
+
+    // Create fresh session record in DB
+    await this.prisma.session.create({
+      data: {
         id: sessionId,
         status: 'connecting',
         webhookUrl: options.webhookUrl || this.configService.get<string>('WEBHOOK_URL') || null,
-      },
-      update: {
-        status: 'connecting',
-        webhookUrl: options.webhookUrl || undefined,
-        retryCount: 0,
       },
     });
 
@@ -149,7 +146,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     const socket = makeWASocket({
       version,
       auth: state,
-      printQRInTerminal: false,
+      printQRInTerminal: true,
       logger: pino({ level: 'silent' }) as any,
       browser: Browsers.ubuntu('Baileys Server'),
       generateHighQualityLinkPreview: true,
@@ -172,8 +169,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
         const code = await socket.requestPairingCode(options.phoneNumber);
         sessionData.pairingCode = code;
         this.eventEmitter.emit('session.pairing-code', { sessionId, pairingCode: code });
+        this.logger.log(`Pairing code generated for "${sessionId}": ${code}`);
       } catch (err) {
         this.logger.error(`Failed to request pairing code for ${sessionId}: ${err}`);
+        // If pairing code request fails, it's often due to socket closing or rate limit
+        throw new BadRequestException(`Failed to request pairing code: ${err.message}`);
       }
     }
 
@@ -235,7 +235,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
               status: 'close',
               retryCount: sessionData.retryCount,
             },
-          }).catch(() => {});
+          }).catch(() => { });
 
           const delay = Math.min(1000 * Math.pow(2, sessionData.retryCount), 30000);
           this.logger.log(`Reconnecting "${sessionId}" in ${delay}ms (attempt ${sessionData.retryCount})`);
@@ -253,7 +253,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
           // Clean up DB — cascade delete auth credentials
           await this.prisma.session.delete({
             where: { id: sessionId },
-          }).catch(() => {});
+          }).catch(() => { });
 
           this.eventEmitter.emit('session.logged-out', { sessionId });
           this.emitWebhook(sessionId, 'connection', { status: 'logged-out' });
@@ -330,7 +330,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     // Delete from DB (cascades to auth_credentials, messages, contacts, chats, webhook_logs)
     await this.prisma.session.delete({
       where: { id: sessionId },
-    }).catch(() => {});
+    }).catch(() => { });
 
     this.logger.log(`Session "${sessionId}" deleted`);
     return { sessionId, status: 'deleted' };
@@ -351,7 +351,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     // Delete from DB
     await this.prisma.session.delete({
       where: { id: sessionId },
-    }).catch(() => {});
+    }).catch(() => { });
 
     return { sessionId, status: 'logged-out' };
   }

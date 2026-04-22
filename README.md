@@ -24,16 +24,19 @@ Comprehensive REST API for WhatsApp built with [NestJS](https://nestjs.com/) and
 
 ```bash
 # Install dependencies
-bun install
+npm install
 
 # Copy environment file
 cp .env.example .env
 
 # Migrate database
-bunx --bun prisma migrate dev --name init
+npx prisma migrate dev --name init
+
+# Generate Prisma Client
+npx prisma generate
 
 # Start development server
-bun run start:dev
+npm run start:dev
 ```
 
 The server starts at `http://localhost:3000`:
@@ -239,7 +242,7 @@ src/
 
 ## Tech Stack
 
-- **Runtime**: Bun v1.3
+- **Runtime**: Nodejs 22
 - **Framework**: NestJS 11
 - **WhatsApp**: @whiskeysockets/baileys v7
 - **Database**: PostgreSQL + Prisma ORM
@@ -247,7 +250,7 @@ src/
 - **Docs**: Swagger/OpenAPI
 - **WebSocket**: Socket.IO
 - **Validation**: class-validator + class-transformer
-- **Package Manager**: bun
+- **Package Manager**: npm
 
 ## License
 
