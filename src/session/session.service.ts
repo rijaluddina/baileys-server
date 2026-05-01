@@ -123,17 +123,19 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     sessionId: string,
     options: { webhookUrl?: string; pairingCode?: boolean; phoneNumber?: string } = {},
   ) {
-    // Ensure clean state: delete existing session data if it exists
     if (this.sessions.has(sessionId)) {
       throw new ConflictException(`Session "${sessionId}" already exists`);
     }
 
-    await this.prisma.session.delete({ where: { id: sessionId } }).catch(() => { });
-
-    // Create fresh session record in DB
-    await this.prisma.session.create({
-      data: {
+    // Preserve related data (messages, contacts, chats) when reconnecting an existing session.
+    await this.prisma.session.upsert({
+      where: { id: sessionId },
+      create: {
         id: sessionId,
+        status: 'connecting',
+        webhookUrl: options.webhookUrl || this.configService.get<string>('WEBHOOK_URL') || null,
+      },
+      update: {
         status: 'connecting',
         webhookUrl: options.webhookUrl || this.configService.get<string>('WEBHOOK_URL') || null,
       },
@@ -496,10 +498,12 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     return { logs, total, limit, offset };
   }
 
-  findMessage(sessionId: string, jid: string, messageId: string): WAMessage | undefined {
-    // This is used for quoting messages — kept synchronous for internal use.
-    // For new code, prefer async getMessages() which reads from DB.
-    return undefined;
+  async findMessage(sessionId: string, jid: string, messageId: string): Promise<WAMessage | undefined> {
+    const storedMessage = await this.prisma.message.findFirst({
+      where: { sessionId, remoteJid: jid, messageId },
+    });
+
+    return storedMessage?.content as unknown as WAMessage | undefined;
   }
 
   private bindBaileysEvents(sessionId: string, socket: WASocket) {

@@ -36,7 +36,7 @@ export class MessagingService {
     const jid = this.formatJid(dto.to);
 
     const quoted = dto.quotedMessageId
-      ? this.sessionService.findMessage(sessionId, jid, dto.quotedMessageId)
+      ? await this.sessionService.findMessage(sessionId, jid, dto.quotedMessageId)
       : undefined;
 
     const opts: Record<string, unknown> = {};
@@ -62,7 +62,7 @@ export class MessagingService {
     }
 
     const quoted = dto.quotedMessageId
-      ? this.sessionService.findMessage(sessionId, jid, dto.quotedMessageId)
+      ? await this.sessionService.findMessage(sessionId, jid, dto.quotedMessageId)
       : undefined;
 
     const opts: Record<string, unknown> = {};
