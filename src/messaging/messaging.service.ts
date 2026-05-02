@@ -1,6 +1,12 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { SessionService } from '../session/session.service.js';
-import type { WAMessage } from '@whiskeysockets/baileys';
+import type {
+  AnyMessageContent,
+  ChatModification,
+  MiscMessageGenerationOptions,
+  WAMessage,
+  WAMessageKey,
+} from '@whiskeysockets/baileys';
 import axios from 'axios';
 import {
   SendTextDto,
@@ -31,6 +37,14 @@ export class MessagingService {
     return `${cleaned}@s.whatsapp.net`;
   }
 
+  private toWAMessage(message: Record<string, unknown>): WAMessage {
+    if (!message['key'] || typeof message['key'] !== 'object') {
+      throw new BadRequestException('Forwarded message must include a Baileys message key');
+    }
+
+    return message as unknown as WAMessage;
+  }
+
   async sendText(sessionId: string, dto: SendTextDto) {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
@@ -39,10 +53,10 @@ export class MessagingService {
       ? await this.sessionService.findMessage(sessionId, jid, dto.quotedMessageId)
       : undefined;
 
-    const opts: Record<string, unknown> = {};
+    const opts: MiscMessageGenerationOptions = {};
     if (quoted) opts.quoted = quoted;
 
-    const result = await socket.sendMessage(jid, { text: dto.text }, opts as any);
+    const result = await socket.sendMessage(jid, { text: dto.text }, opts);
     return { messageId: result?.key?.id, status: 'sent' };
   }
 
@@ -65,10 +79,10 @@ export class MessagingService {
       ? await this.sessionService.findMessage(sessionId, jid, dto.quotedMessageId)
       : undefined;
 
-    const opts: Record<string, unknown> = {};
+    const opts: MiscMessageGenerationOptions = {};
     if (quoted) opts.quoted = quoted;
 
-    let messageContent: Record<string, unknown>;
+    let messageContent: AnyMessageContent;
 
     switch (dto.type) {
       case 'image':
@@ -112,7 +126,7 @@ export class MessagingService {
         throw new BadRequestException(`Invalid media type: ${dto.type}`);
     }
 
-    const result = await socket.sendMessage(jid, messageContent as any, opts as any);
+    const result = await socket.sendMessage(jid, messageContent, opts);
     return { messageId: result?.key?.id, status: 'sent' };
   }
 
@@ -178,12 +192,14 @@ export class MessagingService {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
 
-    const result = await socket.sendMessage(jid, {
+    const content = {
       text: dto.text,
       footer: dto.footer,
       buttons: dto.buttons,
       headerType: 1,
-    } as any);
+    } as unknown as AnyMessageContent;
+
+    const result = await socket.sendMessage(jid, content);
 
     return { messageId: result?.key?.id, status: 'sent' };
   }
@@ -192,13 +208,15 @@ export class MessagingService {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
 
-    const result = await socket.sendMessage(jid, {
+    const content = {
       text: dto.text,
       footer: dto.footer,
       title: dto.title,
       buttonText: dto.buttonText,
       sections: dto.sections,
-    } as any);
+    } as unknown as AnyMessageContent;
+
+    const result = await socket.sendMessage(jid, content);
 
     return { messageId: result?.key?.id, status: 'sent' };
   }
@@ -224,13 +242,15 @@ export class MessagingService {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
 
+    const editKey: WAMessageKey = {
+      remoteJid: jid,
+      id: dto.messageId,
+      fromMe: true,
+    };
+
     const result = await socket.sendMessage(jid, {
       text: dto.text,
-      edit: {
-        remoteJid: jid,
-        id: dto.messageId,
-        fromMe: true,
-      } as any,
+      edit: editKey,
     });
 
     return { messageId: result?.key?.id, status: 'edited' };
@@ -240,19 +260,25 @@ export class MessagingService {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
 
+    const messageKey: WAMessageKey = {
+      remoteJid: jid,
+      id: dto.messageId,
+      fromMe: true,
+    };
+
     if (dto.forEveryone !== false) {
       await socket.sendMessage(jid, {
-        delete: {
-          remoteJid: jid,
-          id: dto.messageId,
-          fromMe: true,
-        } as any,
+        delete: messageKey,
       });
     } else {
-      await socket.chatModify(
-        { clear: { messages: [{ id: dto.messageId, fromMe: true, timestamp: Date.now() }] } } as any,
-        jid,
-      );
+      const modification: ChatModification = {
+        deleteForMe: {
+          deleteMedia: true,
+          key: messageKey,
+          timestamp: Date.now(),
+        },
+      };
+      await socket.chatModify(modification, jid);
     }
 
     return { status: 'deleted' };
@@ -262,13 +288,13 @@ export class MessagingService {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
 
-    const result = await socket.sendMessage(jid, { forward: dto.message as any });
+    const result = await socket.sendMessage(jid, { forward: this.toWAMessage(dto.message) });
     return { messageId: result?.key?.id, status: 'forwarded' };
   }
 
   async readMessages(sessionId: string, dto: ReadMessagesDto) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.readMessages(dto.keys as any);
+    await socket.readMessages(dto.keys as WAMessageKey[]);
     return { status: 'read', count: dto.keys.length };
   }
 
@@ -296,15 +322,19 @@ export class MessagingService {
     const socket = this.sessionService.getSocket(sessionId);
     const statusJid = 'status@broadcast';
 
-    let messageContent: Record<string, unknown>;
+    let messageContent: AnyMessageContent;
+    const options: MiscMessageGenerationOptions = {
+      statusJidList: dto.statusJidList,
+    };
 
     switch (dto.type) {
       case 'text':
+        if (!dto.text) throw new BadRequestException('Text is required for text status');
         messageContent = {
           text: dto.text,
-          backgroundColor: dto.backgroundColor ? parseInt(dto.backgroundColor.replace('#', ''), 16) : undefined,
-          font: dto.font,
         };
+        options.backgroundColor = dto.backgroundColor;
+        options.font = dto.font;
         break;
       case 'image': {
         if (!dto.media) throw new BadRequestException('Media URL is required for image status');
@@ -336,8 +366,8 @@ export class MessagingService {
 
     const result = await socket.sendMessage(
       statusJid,
-      messageContent as any,
-      { statusJidList: dto.statusJidList } as any,
+      messageContent,
+      options,
     );
 
     return { messageId: result?.key?.id, status: 'posted' };

@@ -20,6 +20,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import * as QRCode from 'qrcode';
 import pino from 'pino';
+import type { Prisma } from '../generated/prisma/client/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { QueueService } from '../queue/queue.service.js';
 import { usePrismaAuthState } from './prisma-auth-state.js';
@@ -436,7 +437,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     const dbSession = await this.prisma.session.findUnique({ where: { id: sessionId } });
     if (!dbSession) throw new NotFoundException(`Session "${sessionId}" not found`);
 
-    const where: any = { sessionId, remoteJid: jid };
+    const where: Prisma.MessageWhereInput = { sessionId, remoteJid: jid };
     if (cursor) {
       where.id = { lt: cursor };
     }
@@ -460,7 +461,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     const dbSession = await this.prisma.session.findUnique({ where: { id: sessionId } });
     if (!dbSession) throw new NotFoundException(`Session "${sessionId}" not found`);
 
-    const where: any = { sessionId };
+    const where: Prisma.ContactWhereInput = { sessionId };
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },

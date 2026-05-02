@@ -28,50 +28,50 @@ export class ChatSyncProcessor extends WorkerHost {
   async process(job: Job<ChatJob>): Promise<void> {
     const { sessionId, chats } = job.data;
 
-    let synced = 0;
-    for (const chat of chats) {
-      if (!chat.id) continue;
+    const operations = chats.flatMap((chat) => {
+      if (!chat.id) return [];
 
-      try {
-        const ts = chat.conversationTimestamp;
-        const conversationTimestamp = ts
-          ? BigInt(typeof ts === 'number' ? ts : ts.low)
-          : null;
+      const ts = chat.conversationTimestamp;
+      const conversationTimestamp = ts
+        ? BigInt(typeof ts === 'number' ? ts : ts.low)
+        : null;
 
-        await this.prisma.chat.upsert({
-          where: {
-            sessionId_jid: {
-              sessionId,
-              jid: chat.id,
-            },
-          },
-          create: {
+      return this.prisma.chat.upsert({
+        where: {
+          sessionId_jid: {
             sessionId,
             jid: chat.id,
-            name: chat.name ?? null,
-            conversationTimestamp,
-            unreadCount: chat.unreadCount ?? 0,
-            archived: chat.archive ?? false,
-            pinned: !!chat.pin,
-            muted: chat.mute != null && chat.mute > 0,
           },
-          update: {
-            name: chat.name ?? undefined,
-            conversationTimestamp: conversationTimestamp ?? undefined,
-            unreadCount: chat.unreadCount ?? undefined,
-            archived: chat.archive ?? undefined,
-            pinned: chat.pin !== undefined ? !!chat.pin : undefined,
-            muted: chat.mute !== undefined ? (chat.mute != null && chat.mute > 0) : undefined,
-          },
-        });
-        synced++;
+        },
+        create: {
+          sessionId,
+          jid: chat.id,
+          name: chat.name ?? null,
+          conversationTimestamp,
+          unreadCount: chat.unreadCount ?? 0,
+          archived: chat.archive ?? false,
+          pinned: !!chat.pin,
+          muted: chat.mute != null && chat.mute > 0,
+        },
+        update: {
+          name: chat.name ?? undefined,
+          conversationTimestamp: conversationTimestamp ?? undefined,
+          unreadCount: chat.unreadCount ?? undefined,
+          archived: chat.archive ?? undefined,
+          pinned: chat.pin !== undefined ? !!chat.pin : undefined,
+          muted: chat.mute !== undefined ? (chat.mute != null && chat.mute > 0) : undefined,
+        },
+      });
+    });
+
+    if (operations.length > 0) {
+      try {
+        await this.prisma.$transaction(operations);
       } catch (err) {
-        this.logger.warn(
-          `Failed to sync chat ${chat.id} for session ${sessionId}: ${err}`,
-        );
+        this.logger.warn(`Failed to sync chats for session ${sessionId}: ${err}`);
       }
     }
 
-    this.logger.debug(`Synced ${synced}/${chats.length} chats for session ${sessionId}`);
+    this.logger.debug(`Synced ${operations.length}/${chats.length} chats for session ${sessionId}`);
   }
 }

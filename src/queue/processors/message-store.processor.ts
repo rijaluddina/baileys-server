@@ -1,6 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
+import type { Prisma } from '../../generated/prisma/client/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { QUEUE_NAMES } from '../queue.constants.js';
 
@@ -43,6 +44,10 @@ function getMessageType(message: Record<string, unknown> | undefined): string | 
   return types.find((t) => t in message) ?? null;
 }
 
+function toInputJson(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
 @Processor(QUEUE_NAMES.MESSAGE_STORE)
 export class MessageStoreProcessor extends WorkerHost {
   private readonly logger = new Logger(MessageStoreProcessor.name);
@@ -54,46 +59,47 @@ export class MessageStoreProcessor extends WorkerHost {
   async process(job: Job<MessageJob>): Promise<void> {
     const { sessionId, messages } = job.data;
 
-    let stored = 0;
-    for (const msg of messages) {
+    const operations = messages.flatMap((msg) => {
       const remoteJid = msg.key?.remoteJid;
       const messageId = msg.key?.id;
-      if (!remoteJid || !messageId) continue;
+      if (!remoteJid || !messageId) return [];
 
-      try {
-        const ts = toLong(msg.messageTimestamp);
+      const ts = toLong(msg.messageTimestamp);
+      const content = toInputJson(msg);
 
-        await this.prisma.message.upsert({
-          where: {
-            sessionId_remoteJid_messageId: {
-              sessionId,
-              remoteJid,
-              messageId,
-            },
-          },
-          create: {
+      return this.prisma.message.upsert({
+        where: {
+          sessionId_remoteJid_messageId: {
             sessionId,
             remoteJid,
             messageId,
-            fromMe: msg.key.fromMe ?? false,
-            participant: msg.key.participant ?? null,
-            pushName: msg.pushName ?? null,
-            messageType: getMessageType(msg.message),
-            content: msg as any,
-            timestamp: new Date(ts * 1000),
           },
-          update: {
-            content: msg as any,
-          },
-        });
-        stored++;
+        },
+        create: {
+          sessionId,
+          remoteJid,
+          messageId,
+          fromMe: msg.key.fromMe ?? false,
+          participant: msg.key.participant ?? null,
+          pushName: msg.pushName ?? null,
+          messageType: getMessageType(msg.message),
+          content,
+          timestamp: new Date(ts * 1000),
+        },
+        update: {
+          content,
+        },
+      });
+    });
+
+    if (operations.length > 0) {
+      try {
+        await this.prisma.$transaction(operations);
       } catch (err) {
-        this.logger.warn(
-          `Failed to store message ${messageId} for session ${sessionId}: ${err}`,
-        );
+        this.logger.warn(`Failed to store messages for session ${sessionId}: ${err}`);
       }
     }
 
-    this.logger.debug(`Stored ${stored}/${messages.length} messages for session ${sessionId}`);
+    this.logger.debug(`Stored ${operations.length}/${messages.length} messages for session ${sessionId}`);
   }
 }
