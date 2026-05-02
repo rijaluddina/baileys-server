@@ -17,16 +17,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: npm ci
 
       - name: Type check
-        run: bun run --bun tsc --noEmit
+        run: npx tsc --noEmit
 
   # ===========================================================================
   # Test
@@ -64,32 +65,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: npm ci
 
       - name: Run all tests
-        run: bun test
+        run: npm test
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/whatsapp_test
           REDIS_HOST: localhost
           REDIS_PORT: 6379
           NODE_ENV: test
-          # MCP Proxy test configuration
-          MCP_API_BASE_URL: http://localhost:3000
-          MCP_API_KEY: test-ci-key
-          MCP_RATE_LIMIT: 30
 
       - name: Test summary
         if: always()
         run: |
           echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "Run: bun test" >> $GITHUB_STEP_SUMMARY
-          echo "Includes: MCP security, proxy, parity, sanitization, and negative tests" >> $GITHUB_STEP_SUMMARY
+          echo "Run: npm test" >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
   # Build Docker Images
@@ -99,15 +96,6 @@ jobs:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
-    strategy:
-      matrix:
-        target: [rest, mcp]
-        include:
-          - target: rest
-            tag: whatsapp-server:latest
-          - target: mcp
-            tag: whatsapp-mcp:latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -115,12 +103,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build ${{ matrix.target }} image
+      - name: Build production image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: false
-          target: ${{ matrix.target }}
-          tags: ${{ matrix.tag }}
+          target: production
+          tags: whatsapp-server:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
