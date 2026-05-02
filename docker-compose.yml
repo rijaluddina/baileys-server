@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql://baileys:baileys@postgres:5432/baileys_server
+      - DATABASE_URL=${DATABASE_URL:-postgresql://baileys:baileys@postgres:5432/baileys_server}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:

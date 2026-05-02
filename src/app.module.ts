@@ -12,6 +12,7 @@ import { GroupModule } from './group/group.module.js';
 import { ChatModule } from './chat/chat.module.js';
 import { ContactModule } from './contact/contact.module.js';
 import { MiscModule } from './misc/misc.module.js';
+import { HealthModule } from './health/health.module.js';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { MiscModule } from './misc/misc.module.js';
     ChatModule,
     ContactModule,
     MiscModule,
+    HealthModule,
   ],
   providers: [
     {

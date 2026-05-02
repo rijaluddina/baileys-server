@@ -19,6 +19,19 @@ describe('AppModule (e2e)', () => {
     expect(app).toBeDefined();
   });
 
+  it('GET /health returns service status', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/health',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.payload)).toMatchObject({
+      status: 'ok',
+      service: 'baileys-server',
+    });
+  });
+
   afterEach(async () => {
     await app.close();
   });
