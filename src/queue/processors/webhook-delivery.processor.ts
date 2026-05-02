@@ -59,8 +59,7 @@ export class WebhookDeliveryProcessor extends WorkerHost {
         timeout: 15000,
       });
 
-      // Log successful delivery
-      await this.prisma.webhookLog.create({
+      await this.createWebhookLog({
         data: {
           sessionId,
           event,
@@ -77,8 +76,7 @@ export class WebhookDeliveryProcessor extends WorkerHost {
       const statusCode = error.response?.status ?? null;
       const errorMessage = error.message || 'Unknown error';
 
-      // Log failed delivery
-      await this.prisma.webhookLog.create({
+      await this.createWebhookLog({
         data: {
           sessionId,
           event,
@@ -100,6 +98,14 @@ export class WebhookDeliveryProcessor extends WorkerHost {
 
       // Re-throw so BullMQ retries
       throw error;
+    }
+  }
+
+  private async createWebhookLog(args: Parameters<PrismaService['webhookLog']['create']>[0]) {
+    try {
+      await this.prisma.webhookLog.create(args);
+    } catch (error: any) {
+      this.logger.error(`Failed to write webhook log: ${error.message || error}`);
     }
   }
 }

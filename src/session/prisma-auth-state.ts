@@ -8,15 +8,6 @@ import { proto } from '@whiskeysockets/baileys';
 import { initAuthCreds, BufferJSON } from '@whiskeysockets/baileys';
 import type { PrismaService } from '../prisma/prisma.service.js';
 
-const KEY_MAP: Record<string, string> = {
-  'pre-key': 'pre-key',
-  'session': 'session',
-  'sender-key': 'sender-key',
-  'app-state-sync-key': 'app-state-sync-key',
-  'app-state-sync-version': 'app-state-sync-version',
-  'sender-key-memory': 'sender-key-memory',
-};
-
 function buildKey(type: string, id: string): string {
   return `${type}-${id}`;
 }
@@ -87,7 +78,7 @@ export async function usePrismaAuthState(
       },
 
       set: async (data: SignalDataSet): Promise<void> => {
-        const operations: Promise<unknown>[] = [];
+        const operations: unknown[] = [];
 
         for (const _type in data) {
           const type = _type as keyof SignalDataTypeMap;
@@ -118,7 +109,9 @@ export async function usePrismaAuthState(
           }
         }
 
-        await Promise.all(operations);
+        if (operations.length > 0) {
+          await prisma.$transaction(operations as any);
+        }
       },
     },
   };

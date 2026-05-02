@@ -39,6 +39,7 @@ interface SessionData {
 export class SessionService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SessionService.name);
   private readonly sessions = new Map<string, SessionData>();
+  private readonly reconnectTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly configService: ConfigService,
@@ -56,6 +57,8 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
+    this.clearAllReconnectTimers();
+
     for (const [id, session] of this.sessions) {
       try {
         session.socket.end(undefined);
@@ -123,6 +126,8 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     sessionId: string,
     options: { webhookUrl?: string; pairingCode?: boolean; phoneNumber?: string } = {},
   ) {
+    this.clearReconnectTimer(sessionId);
+
     if (this.sessions.has(sessionId)) {
       throw new ConflictException(`Session "${sessionId}" already exists`);
     }
@@ -242,14 +247,19 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
           const delay = Math.min(1000 * Math.pow(2, sessionData.retryCount), 30000);
           this.logger.log(`Reconnecting "${sessionId}" in ${delay}ms (attempt ${sessionData.retryCount})`);
 
-          setTimeout(() => {
+          this.clearReconnectTimer(sessionId);
+          const timer = setTimeout(() => {
+            this.reconnectTimers.delete(sessionId);
+            if (!this.sessions.has(sessionId)) return;
             this.sessions.delete(sessionId);
             this.createSession(sessionId, options).catch((err) => {
               this.logger.error(`Failed to reconnect "${sessionId}": ${err}`);
             });
           }, delay);
+          this.reconnectTimers.set(sessionId, timer);
         } else if (!shouldReconnect) {
           this.logger.log(`Session "${sessionId}" logged out, cleaning up`);
+          this.clearReconnectTimer(sessionId);
           this.sessions.delete(sessionId);
 
           // Clean up DB — cascade delete auth credentials
@@ -313,6 +323,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
   }
 
   async deleteSession(sessionId: string) {
+    this.clearReconnectTimer(sessionId);
     const session = this.sessions.get(sessionId);
     if (!session) {
       // Check if session exists in DB
@@ -339,6 +350,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
   }
 
   async logoutSession(sessionId: string) {
+    this.clearReconnectTimer(sessionId);
     const session = this.sessions.get(sessionId);
     if (!session) throw new NotFoundException(`Session "${sessionId}" not found`);
 
@@ -356,6 +368,24 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     }).catch(() => { });
 
     return { sessionId, status: 'logged-out' };
+  }
+
+  async reconnectSession(sessionId: string) {
+    this.removeFromMemory(sessionId);
+    return this.createSession(sessionId);
+  }
+
+  removeFromMemory(sessionId: string) {
+    this.clearReconnectTimer(sessionId);
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      try {
+        session.socket.end(undefined);
+      } catch {
+        // Socket may already be closed
+      }
+      this.sessions.delete(sessionId);
+    }
   }
 
   async getStatus(sessionId: string): Promise<Record<string, unknown>> {
@@ -543,5 +573,19 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
         this.logger.error(`Failed to queue webhook for ${sessionId}: ${err}`);
       });
     }
+  }
+
+  private clearReconnectTimer(sessionId: string) {
+    const timer = this.reconnectTimers.get(sessionId);
+    if (!timer) return;
+    clearTimeout(timer);
+    this.reconnectTimers.delete(sessionId);
+  }
+
+  private clearAllReconnectTimers() {
+    for (const timer of this.reconnectTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.reconnectTimers.clear();
   }
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ApiKeyGuard } from './common/guards/api-key.guard.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { QueueModule } from './queue/queue.module.js';
@@ -11,11 +12,16 @@ import { GroupModule } from './group/group.module.js';
 import { ChatModule } from './chat/chat.module.js';
 import { ContactModule } from './contact/contact.module.js';
 import { MiscModule } from './misc/misc.module.js';
-import { WebhookModule } from './webhook/webhook.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: Number(process.env.THROTTLE_LIMIT ?? 120),
+      },
+    ]),
     EventEmitterModule.forRoot({ wildcard: true }),
     PrismaModule,
     QueueModule,
@@ -25,9 +31,12 @@ import { WebhookModule } from './webhook/webhook.module.js';
     ChatModule,
     ContactModule,
     MiscModule,
-    WebhookModule,
   ],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: ApiKeyGuard,

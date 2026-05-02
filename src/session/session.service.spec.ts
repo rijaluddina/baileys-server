@@ -24,17 +24,22 @@ describe('SessionService', () => {
   };
 
   function createService(prismaOverrides: Record<string, unknown> = {}) {
+    const eventHandlers = new Map<string, (...args: any[]) => unknown>();
+    socket.ev.on.mockImplementation((event: string, handler: (...args: any[]) => unknown) => {
+      eventHandlers.set(event, handler);
+    });
+
     const configService = {
       get: jest.fn((key: string) => (key === 'WEBHOOK_URL' ? 'https://example.test/webhook' : undefined)),
     };
     const eventEmitter = { emit: jest.fn() };
     const prisma = {
       session: {
-        delete: jest.fn(),
+        delete: jest.fn().mockResolvedValue(undefined),
         upsert: jest.fn(),
         findUnique: jest.fn(),
         findMany: jest.fn(),
-        update: jest.fn(),
+        update: jest.fn().mockResolvedValue(undefined),
       },
       message: {
         findFirst: jest.fn(),
@@ -43,10 +48,10 @@ describe('SessionService', () => {
     };
     const queueService = {
       scheduleMessageCleanup: jest.fn(),
-      addMessageStoreJob: jest.fn(),
-      addContactSyncJob: jest.fn(),
-      addChatSyncJob: jest.fn(),
-      addWebhookDeliveryJob: jest.fn(),
+      addMessageStoreJob: jest.fn().mockResolvedValue(undefined),
+      addContactSyncJob: jest.fn().mockResolvedValue(undefined),
+      addChatSyncJob: jest.fn().mockResolvedValue(undefined),
+      addWebhookDeliveryJob: jest.fn().mockResolvedValue(undefined),
     };
 
     return {
@@ -57,6 +62,7 @@ describe('SessionService', () => {
         queueService as any,
       ),
       prisma,
+      eventHandlers,
     };
   }
 
@@ -125,5 +131,27 @@ describe('SessionService', () => {
         messageId: 'message-1',
       },
     });
+  });
+
+  it('does not reconnect a session after it has been deleted during retry delay', async () => {
+    jest.useFakeTimers();
+    const { service, eventHandlers } = createService();
+    await service.createSession('session-1');
+
+    const connectionHandler = eventHandlers.get('connection.update');
+    expect(connectionHandler).toBeDefined();
+
+    await connectionHandler?.({
+      connection: 'close',
+      lastDisconnect: { error: { output: { statusCode: 500 } } },
+    });
+
+    const reconnectSpy = jest.spyOn(service, 'createSession').mockResolvedValue({ sessionId: 'session-1', status: 'connecting' });
+
+    await service.deleteSession('session-1');
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(reconnectSpy).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 });

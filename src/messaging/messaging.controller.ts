@@ -1,5 +1,6 @@
 import { Controller, Post, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiSecurity, ApiParam } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { MessagingService } from './messaging.service.js';
 import {
   SendTextDto,
@@ -20,6 +21,7 @@ import {
 
 @ApiTags('Messaging')
 @ApiSecurity('x-api-key')
+@Throttle({ default: { ttl: 60000, limit: 30 } })
 @Controller(':sessionId/messages')
 export class MessagingController {
   constructor(private readonly messagingService: MessagingService) {}

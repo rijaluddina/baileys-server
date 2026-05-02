@@ -61,18 +61,7 @@ export class SessionController {
   @ApiOperation({ summary: 'Force reconnect a session from stored auth state' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
   async reconnect(@Param('sessionId') sessionId: string) {
-    // If already connected in memory, delete it first
-    if (this.sessionService.isSessionExists(sessionId)) {
-      const session = this.sessionService.getSessionData(sessionId);
-      try {
-        session.socket.end(undefined);
-      } catch {
-        // Ignore
-      }
-    }
-    // Remove from memory map via reflection
-    (this.sessionService as any).sessions?.delete(sessionId);
-    return this.sessionService.createSession(sessionId);
+    return this.sessionService.reconnectSession(sessionId);
   }
 
   // === Data Access Endpoints ===
