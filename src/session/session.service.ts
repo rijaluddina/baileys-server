@@ -154,7 +154,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     const socket = makeWASocket({
       version,
       auth: state,
-      printQRInTerminal: true,
+      printQRInTerminal: false,
       logger: pino({ level: 'silent' }) as any,
       browser: Browsers.ubuntu('Baileys Server'),
       generateHighQualityLinkPreview: true,
