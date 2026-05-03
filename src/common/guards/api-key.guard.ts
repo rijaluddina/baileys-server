@@ -22,13 +22,16 @@ export class ApiKeyGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const request = context.switchToHttp().getRequest();
+    const request = context
+      .switchToHttp()
+      .getRequest<import('fastify').FastifyRequest>();
     const apiKey = request.headers['x-api-key'] as string;
     const configuredKey = this.configService.get<string>('API_KEY');
 
     if (!configuredKey) return true; // No key configured = open access
     if (!apiKey) throw new UnauthorizedException('API key is required');
-    if (apiKey !== configuredKey) throw new UnauthorizedException('Invalid API key');
+    if (apiKey !== configuredKey)
+      throw new UnauthorizedException('Invalid API key');
 
     return true;
   }

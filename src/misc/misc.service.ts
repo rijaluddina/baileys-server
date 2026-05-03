@@ -2,10 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SessionService } from '../session/session.service.js';
 import {
   SetPresenceDto,
-  UpdatePrivacyDto,
   CreateNewsletterDto,
   SendNewsletterMessageDto,
 } from './dto/misc.dto.js';
+import {
+  WAPrivacyValue,
+  WAPrivacyOnlineValue,
+  WAReadReceiptsValue,
+  WAPrivacyGroupAddValue,
+} from '@whiskeysockets/baileys';
 
 @Injectable()
 export class MiscService {
@@ -16,7 +21,7 @@ export class MiscService {
   // === Presence ===
   async setPresence(sessionId: string, dto: SetPresenceDto) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.sendPresenceUpdate(dto.presence as any, dto.jid);
+    await socket.sendPresenceUpdate(dto.presence, dto.jid);
     return { status: 'updated', presence: dto.presence };
   }
 
@@ -27,10 +32,13 @@ export class MiscService {
   }
 
   // === Labels ===
-  async getLabels(sessionId: string) {
+  getLabels(sessionId: string) {
     // Labels are delivered via events (labels.edit, labels.association)
     this.sessionService.getSocket(sessionId);
-    return { message: 'Labels are delivered in real-time via webhook/websocket events (labels.edit, labels.association)' };
+    return {
+      message:
+        'Labels are delivered in real-time via webhook/websocket events (labels.edit, labels.association)',
+    };
   }
 
   async addChatLabel(sessionId: string, jid: string, labelId: string) {
@@ -45,13 +53,23 @@ export class MiscService {
     return { status: 'removed' };
   }
 
-  async addMessageLabel(sessionId: string, jid: string, messageId: string, labelId: string) {
+  async addMessageLabel(
+    sessionId: string,
+    jid: string,
+    messageId: string,
+    labelId: string,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
     await socket.addMessageLabel(jid, messageId, labelId);
     return { status: 'assigned' };
   }
 
-  async removeMessageLabel(sessionId: string, jid: string, messageId: string, labelId: string) {
+  async removeMessageLabel(
+    sessionId: string,
+    jid: string,
+    messageId: string,
+    labelId: string,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
     await socket.removeMessageLabel(jid, messageId, labelId);
     return { status: 'removed' };
@@ -65,37 +83,37 @@ export class MiscService {
 
   async updateLastSeenPrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateLastSeenPrivacy(value as any);
+    await socket.updateLastSeenPrivacy(value as WAPrivacyValue);
     return { status: 'updated', setting: 'last-seen', value };
   }
 
   async updateOnlinePrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateOnlinePrivacy(value as any);
+    await socket.updateOnlinePrivacy(value as WAPrivacyOnlineValue);
     return { status: 'updated', setting: 'online', value };
   }
 
   async updateProfilePicturePrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateProfilePicturePrivacy(value as any);
+    await socket.updateProfilePicturePrivacy(value as WAPrivacyValue);
     return { status: 'updated', setting: 'profile-picture', value };
   }
 
   async updateStatusPrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateStatusPrivacy(value as any);
+    await socket.updateStatusPrivacy(value as WAPrivacyValue);
     return { status: 'updated', setting: 'status', value };
   }
 
   async updateReadReceiptsPrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateReadReceiptsPrivacy(value as any);
+    await socket.updateReadReceiptsPrivacy(value as WAReadReceiptsValue);
     return { status: 'updated', setting: 'read-receipts', value };
   }
 
   async updateGroupsAddPrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateGroupsAddPrivacy(value as any);
+    await socket.updateGroupsAddPrivacy(value as WAPrivacyGroupAddValue);
     return { status: 'updated', setting: 'groups', value };
   }
 
@@ -135,9 +153,14 @@ export class MiscService {
     return socket.newsletterMetadata('jid', newsletterJid);
   }
 
-  async sendNewsletterMessage(sessionId: string, dto: SendNewsletterMessageDto) {
+  async sendNewsletterMessage(
+    sessionId: string,
+    dto: SendNewsletterMessageDto,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
-    const result = await socket.sendMessage(dto.newsletterJid, { text: dto.text });
+    const result = await socket.sendMessage(dto.newsletterJid, {
+      text: dto.text,
+    });
     return { messageId: result?.key?.id, status: 'sent' };
   }
 
@@ -146,13 +169,21 @@ export class MiscService {
     return socket.newsletterSubscribers(newsletterJid);
   }
 
-  async updateNewsletterName(sessionId: string, newsletterJid: string, name: string) {
+  async updateNewsletterName(
+    sessionId: string,
+    newsletterJid: string,
+    name: string,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
     await socket.newsletterUpdateName(newsletterJid, name);
     return { status: 'updated' };
   }
 
-  async updateNewsletterDescription(sessionId: string, newsletterJid: string, description: string) {
+  async updateNewsletterDescription(
+    sessionId: string,
+    newsletterJid: string,
+    description: string,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
     await socket.newsletterUpdateDescription(newsletterJid, description);
     return { status: 'updated' };
@@ -164,25 +195,41 @@ export class MiscService {
     return { status: 'deleted' };
   }
 
-  async newsletterReactMessage(sessionId: string, newsletterJid: string, serverId: string, reaction?: string) {
+  async newsletterReactMessage(
+    sessionId: string,
+    newsletterJid: string,
+    serverId: string,
+    reaction?: string,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
     await socket.newsletterReactMessage(newsletterJid, serverId, reaction);
     return { status: 'reacted' };
   }
 
-  async newsletterFetchMessages(sessionId: string, newsletterJid: string, count: number, since: number, after: number) {
+  async newsletterFetchMessages(
+    sessionId: string,
+    newsletterJid: string,
+    count: number,
+    since: number,
+    after: number,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
-    return socket.newsletterFetchMessages(newsletterJid, count, since, after);
+    return socket.newsletterFetchMessages(
+      newsletterJid,
+      count,
+      since,
+      after,
+    ) as Promise<unknown>;
   }
 
   // === Blocklist ===
-  async getBlocklist(sessionId: string) {
+  async getBlocklist(sessionId: string): Promise<string[]> {
     const socket = this.sessionService.getSocket(sessionId);
-    return socket.fetchBlocklist();
+    return socket.fetchBlocklist() as Promise<string[]>;
   }
 
   // === Device Info ===
-  async getDeviceInfo(sessionId: string) {
+  getDeviceInfo(sessionId: string) {
     const socket = this.sessionService.getSocket(sessionId);
     return {
       user: socket.user,

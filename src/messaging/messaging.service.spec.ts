@@ -12,7 +12,8 @@ jest.mock('../session/prisma-auth-state', () => ({
   usePrismaAuthState: jest.fn(),
 }));
 
-import { MessagingService } from './messaging.service';
+import { MessagingService } from './messaging.service.js';
+import { SessionService } from '../session/session.service.js';
 
 describe('MessagingService', () => {
   it('awaits quoted message lookup before sending text replies', async () => {
@@ -30,7 +31,9 @@ describe('MessagingService', () => {
       getSocket: jest.fn().mockReturnValue(socket),
       findMessage: jest.fn().mockResolvedValue(quoted),
     };
-    const service = new MessagingService(sessionService as any);
+    const service = new MessagingService(
+      sessionService as unknown as SessionService,
+    );
 
     await expect(
       service.sendText('session-1', {

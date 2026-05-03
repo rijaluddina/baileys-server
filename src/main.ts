@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter.js';
@@ -39,19 +42,19 @@ async function bootstrap() {
     .setTitle('Baileys WhatsApp API')
     .setDescription(
       'Comprehensive REST API for WhatsApp using Baileys library.\n\n' +
-      '## Features\n' +
-      '- 📱 Multi-session management (QR code & pairing code)\n' +
-      '- 💬 Full messaging: text, media, contacts, location, polls, buttons, lists\n' +
-      '- 👥 Group management: create, modify, participants, invite codes\n' +
-      '- 📋 Chat operations: archive, pin, mute, delete\n' +
-      '- 📇 Contact management: check numbers, profiles, block/unblock\n' +
-      '- 🟢 Presence: composing, recording, available, unavailable\n' +
-      '- 🏷️ Labels: assign/remove from chats and messages\n' +
-      '- 🔒 Privacy settings management\n' +
-      '- 📢 Newsletter/Channel management\n' +
-      '- 📡 Status/Stories: post text, image, video\n' +
-      '- 🔔 Webhook delivery with HMAC signing\n' +
-      '- 🔌 WebSocket for real-time events',
+        '## Features\n' +
+        '- 📱 Multi-session management (QR code & pairing code)\n' +
+        '- 💬 Full messaging: text, media, contacts, location, polls, buttons, lists\n' +
+        '- 👥 Group management: create, modify, participants, invite codes\n' +
+        '- 📋 Chat operations: archive, pin, mute, delete\n' +
+        '- 📇 Contact management: check numbers, profiles, block/unblock\n' +
+        '- 🟢 Presence: composing, recording, available, unavailable\n' +
+        '- 🏷️ Labels: assign/remove from chats and messages\n' +
+        '- 🔒 Privacy settings management\n' +
+        '- 📢 Newsletter/Channel management\n' +
+        '- 📡 Status/Stories: post text, image, video\n' +
+        '- 🔔 Webhook delivery with HMAC signing\n' +
+        '- 🔌 WebSocket for real-time events',
     )
     .setVersion('1.0.0')
     .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'x-api-key')
@@ -80,4 +83,7 @@ async function bootstrap() {
   logger.log(`🔌 WebSocket at ws://localhost:${port}/ws`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Failed to start application:', err);
+  process.exit(1);
+});

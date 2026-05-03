@@ -39,7 +39,9 @@ export class MessagingService {
 
   private toWAMessage(message: Record<string, unknown>): WAMessage {
     if (!message['key'] || typeof message['key'] !== 'object') {
-      throw new BadRequestException('Forwarded message must include a Baileys message key');
+      throw new BadRequestException(
+        'Forwarded message must include a Baileys message key',
+      );
     }
 
     return message as unknown as WAMessage;
@@ -50,7 +52,11 @@ export class MessagingService {
     const jid = this.formatJid(dto.to);
 
     const quoted = dto.quotedMessageId
-      ? await this.sessionService.findMessage(sessionId, jid, dto.quotedMessageId)
+      ? await this.sessionService.findMessage(
+          sessionId,
+          jid,
+          dto.quotedMessageId,
+        )
       : undefined;
 
     const opts: MiscMessageGenerationOptions = {};
@@ -66,8 +72,10 @@ export class MessagingService {
 
     let mediaBuffer: Buffer;
     if (dto.media.startsWith('http://') || dto.media.startsWith('https://')) {
-      const response = await axios.get(dto.media, { responseType: 'arraybuffer' });
-      mediaBuffer = Buffer.from(response.data);
+      const response = await axios.get(dto.media, {
+        responseType: 'arraybuffer',
+      });
+      mediaBuffer = Buffer.from(response.data as ArrayBuffer);
     } else if (dto.media.startsWith('data:')) {
       const base64Data = dto.media.split(',')[1];
       mediaBuffer = Buffer.from(base64Data, 'base64');
@@ -76,7 +84,11 @@ export class MessagingService {
     }
 
     const quoted = dto.quotedMessageId
-      ? await this.sessionService.findMessage(sessionId, jid, dto.quotedMessageId)
+      ? await this.sessionService.findMessage(
+          sessionId,
+          jid,
+          dto.quotedMessageId,
+        )
       : undefined;
 
     const opts: MiscMessageGenerationOptions = {};
@@ -123,7 +135,9 @@ export class MessagingService {
         };
         break;
       default:
-        throw new BadRequestException(`Invalid media type: ${dto.type}`);
+        throw new BadRequestException(
+          `Invalid media type: ${dto.type as string}`,
+        );
     }
 
     const result = await socket.sendMessage(jid, messageContent, opts);
@@ -149,7 +163,10 @@ export class MessagingService {
 
     const result = await socket.sendMessage(jid, {
       contacts: {
-        displayName: dto.contacts.length === 1 ? dto.contacts[0].fullName : `${dto.contacts.length} contacts`,
+        displayName:
+          dto.contacts.length === 1
+            ? dto.contacts[0].fullName
+            : `${dto.contacts.length} contacts`,
         contacts: vCards.map((vcard) => ({ vcard })),
       },
     });
@@ -288,13 +305,15 @@ export class MessagingService {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
 
-    const result = await socket.sendMessage(jid, { forward: this.toWAMessage(dto.message) });
+    const result = await socket.sendMessage(jid, {
+      forward: this.toWAMessage(dto.message),
+    });
     return { messageId: result?.key?.id, status: 'forwarded' };
   }
 
   async readMessages(sessionId: string, dto: ReadMessagesDto) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.readMessages(dto.keys as WAMessageKey[]);
+    await socket.readMessages(dto.keys);
     return { status: 'read', count: dto.keys.length };
   }
 
@@ -307,7 +326,12 @@ export class MessagingService {
     return { status: dto.star ? 'starred' : 'unstarred' };
   }
 
-  async sendLinkPreview(sessionId: string, to: string, url: string, text?: string) {
+  async sendLinkPreview(
+    sessionId: string,
+    to: string,
+    url: string,
+    text?: string,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(to);
 
@@ -329,7 +353,8 @@ export class MessagingService {
 
     switch (dto.type) {
       case 'text':
-        if (!dto.text) throw new BadRequestException('Text is required for text status');
+        if (!dto.text)
+          throw new BadRequestException('Text is required for text status');
         messageContent = {
           text: dto.text,
         };
@@ -337,11 +362,16 @@ export class MessagingService {
         options.font = dto.font;
         break;
       case 'image': {
-        if (!dto.media) throw new BadRequestException('Media URL is required for image status');
+        if (!dto.media)
+          throw new BadRequestException(
+            'Media URL is required for image status',
+          );
         let buffer: Buffer;
         if (dto.media.startsWith('http')) {
-          const res = await axios.get(dto.media, { responseType: 'arraybuffer' });
-          buffer = Buffer.from(res.data);
+          const res = await axios.get(dto.media, {
+            responseType: 'arraybuffer',
+          });
+          buffer = Buffer.from(res.data as ArrayBuffer);
         } else {
           buffer = Buffer.from(dto.media, 'base64');
         }
@@ -349,11 +379,16 @@ export class MessagingService {
         break;
       }
       case 'video': {
-        if (!dto.media) throw new BadRequestException('Media URL is required for video status');
+        if (!dto.media)
+          throw new BadRequestException(
+            'Media URL is required for video status',
+          );
         let buffer: Buffer;
         if (dto.media.startsWith('http')) {
-          const res = await axios.get(dto.media, { responseType: 'arraybuffer' });
-          buffer = Buffer.from(res.data);
+          const res = await axios.get(dto.media, {
+            responseType: 'arraybuffer',
+          });
+          buffer = Buffer.from(res.data as ArrayBuffer);
         } else {
           buffer = Buffer.from(dto.media, 'base64');
         }
@@ -361,14 +396,12 @@ export class MessagingService {
         break;
       }
       default:
-        throw new BadRequestException(`Invalid status type: ${dto.type}`);
+        throw new BadRequestException(
+          `Invalid status type: ${dto.type as string}`,
+        );
     }
 
-    const result = await socket.sendMessage(
-      statusJid,
-      messageContent,
-      options,
-    );
+    const result = await socket.sendMessage(statusJid, messageContent, options);
 
     return { messageId: result?.key?.id, status: 'posted' };
   }

@@ -19,7 +19,11 @@ export class GroupService {
   async createGroup(sessionId: string, dto: CreateGroupDto) {
     const socket = this.sessionService.getSocket(sessionId);
     const result = await socket.groupCreate(dto.subject, dto.participants);
-    return { groupId: result.id, subject: result.subject, participants: result.participants };
+    return {
+      groupId: result.id,
+      subject: result.subject,
+      participants: result.participants,
+    };
   }
 
   async getAllGroups(sessionId: string) {
@@ -52,32 +56,58 @@ export class GroupService {
     return { inviteCode: code, link: `https://chat.whatsapp.com/${code}` };
   }
 
-  async updateGroupSubject(sessionId: string, groupId: string, dto: UpdateGroupSubjectDto) {
+  async updateGroupSubject(
+    sessionId: string,
+    groupId: string,
+    dto: UpdateGroupSubjectDto,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
     await socket.groupUpdateSubject(groupId, dto.subject);
     return { status: 'updated' };
   }
 
-  async updateGroupDescription(sessionId: string, groupId: string, dto: UpdateGroupDescriptionDto) {
+  async updateGroupDescription(
+    sessionId: string,
+    groupId: string,
+    dto: UpdateGroupDescriptionDto,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
     await socket.groupUpdateDescription(groupId, dto.description);
     return { status: 'updated' };
   }
 
-  async updateGroupSettings(sessionId: string, groupId: string, dto: UpdateGroupSettingsDto) {
+  async updateGroupSettings(
+    sessionId: string,
+    groupId: string,
+    dto: UpdateGroupSettingsDto,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
     if (dto.announce !== undefined) {
-      await socket.groupSettingUpdate(groupId, dto.announce ? 'announcement' : 'not_announcement');
+      await socket.groupSettingUpdate(
+        groupId,
+        dto.announce ? 'announcement' : 'not_announcement',
+      );
     }
     if (dto.restrict !== undefined) {
-      await socket.groupSettingUpdate(groupId, dto.restrict ? 'locked' : 'unlocked');
+      await socket.groupSettingUpdate(
+        groupId,
+        dto.restrict ? 'locked' : 'unlocked',
+      );
     }
     return { status: 'updated' };
   }
 
-  async modifyParticipants(sessionId: string, groupId: string, dto: GroupParticipantActionDto) {
+  async modifyParticipants(
+    sessionId: string,
+    groupId: string,
+    dto: GroupParticipantActionDto,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
-    const result = await socket.groupParticipantsUpdate(groupId, dto.participants, dto.action);
+    const result = await socket.groupParticipantsUpdate(
+      groupId,
+      dto.participants,
+      dto.action,
+    );
     return { results: result };
   }
 
@@ -93,13 +123,19 @@ export class GroupService {
     return { groupId: result };
   }
 
-  async updateGroupPicture(sessionId: string, groupId: string, dto: UpdateGroupPictureDto) {
+  async updateGroupPicture(
+    sessionId: string,
+    groupId: string,
+    dto: UpdateGroupPictureDto,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
 
     let imageBuffer: Buffer;
     if (dto.image.startsWith('http')) {
-      const response = await axios.get(dto.image, { responseType: 'arraybuffer' });
-      imageBuffer = Buffer.from(response.data);
+      const response = await axios.get(dto.image, {
+        responseType: 'arraybuffer',
+      });
+      imageBuffer = Buffer.from(response.data as ArrayBuffer);
     } else {
       imageBuffer = Buffer.from(dto.image, 'base64');
     }

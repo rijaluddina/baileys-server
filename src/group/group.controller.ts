@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Put, Delete, Param, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Put,
+  Delete,
+  Param,
+  Body,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiSecurity, ApiParam } from '@nestjs/swagger';
 import { GroupService } from './group.service.js';
 import {
@@ -35,7 +43,10 @@ export class GroupController {
   @ApiOperation({ summary: 'Get group metadata' })
   @ApiParam({ name: 'sessionId' })
   @ApiParam({ name: 'groupId' })
-  getMetadata(@Param('sessionId') sessionId: string, @Param('groupId') groupId: string) {
+  getMetadata(
+    @Param('sessionId') sessionId: string,
+    @Param('groupId') groupId: string,
+  ) {
     return this.groupService.getGroupMetadata(sessionId, groupId);
   }
 
@@ -43,7 +54,10 @@ export class GroupController {
   @ApiOperation({ summary: 'Get group invite code' })
   @ApiParam({ name: 'sessionId' })
   @ApiParam({ name: 'groupId' })
-  getInviteCode(@Param('sessionId') sessionId: string, @Param('groupId') groupId: string) {
+  getInviteCode(
+    @Param('sessionId') sessionId: string,
+    @Param('groupId') groupId: string,
+  ) {
     return this.groupService.getGroupInviteCode(sessionId, groupId);
   }
 
@@ -51,7 +65,10 @@ export class GroupController {
   @ApiOperation({ summary: 'Revoke and regenerate group invite link' })
   @ApiParam({ name: 'sessionId' })
   @ApiParam({ name: 'groupId' })
-  revokeInvite(@Param('sessionId') sessionId: string, @Param('groupId') groupId: string) {
+  revokeInvite(
+    @Param('sessionId') sessionId: string,
+    @Param('groupId') groupId: string,
+  ) {
     return this.groupService.revokeGroupInvite(sessionId, groupId);
   }
 
@@ -107,7 +124,10 @@ export class GroupController {
   @ApiOperation({ summary: 'Leave a group' })
   @ApiParam({ name: 'sessionId' })
   @ApiParam({ name: 'groupId' })
-  leave(@Param('sessionId') sessionId: string, @Param('groupId') groupId: string) {
+  leave(
+    @Param('sessionId') sessionId: string,
+    @Param('groupId') groupId: string,
+  ) {
     return this.groupService.leaveGroup(sessionId, groupId);
   }
 
@@ -134,7 +154,10 @@ export class GroupController {
   @ApiOperation({ summary: 'Get group info from invite code' })
   @ApiParam({ name: 'sessionId' })
   @ApiParam({ name: 'inviteCode' })
-  getInviteInfo(@Param('sessionId') sessionId: string, @Param('inviteCode') inviteCode: string) {
+  getInviteInfo(
+    @Param('sessionId') sessionId: string,
+    @Param('inviteCode') inviteCode: string,
+  ) {
     return this.groupService.getGroupInviteInfo(sessionId, inviteCode);
   }
 }

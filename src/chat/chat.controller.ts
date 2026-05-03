@@ -1,5 +1,20 @@
-import { Controller, Get, Post, Param, Body, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiSecurity, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Query,
+  ParseIntPipe,
+  DefaultValuePipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiSecurity,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { ChatService } from './chat.service.js';
 import {
   ArchiveChatDto,
@@ -19,8 +34,18 @@ export class ChatController {
   @Get()
   @ApiOperation({ summary: 'Get all chats (from database)' })
   @ApiParam({ name: 'sessionId' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Limit (default: 50)' })
-  @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Offset (default: 0)' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limit (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: 'Offset (default: 0)',
+  })
   getChats(
     @Param('sessionId') sessionId: string,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
@@ -53,14 +78,20 @@ export class ChatController {
   @Post('mark-read')
   @ApiOperation({ summary: 'Mark chat as read or unread' })
   @ApiParam({ name: 'sessionId' })
-  markRead(@Param('sessionId') sessionId: string, @Body() dto: MarkChatReadDto) {
+  markRead(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: MarkChatReadDto,
+  ) {
     return this.chatService.markChatRead(sessionId, dto);
   }
 
   @Post('delete')
   @ApiOperation({ summary: 'Delete a chat' })
   @ApiParam({ name: 'sessionId' })
-  deleteChat(@Param('sessionId') sessionId: string, @Body() dto: DeleteChatDto) {
+  deleteChat(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: DeleteChatDto,
+  ) {
     return this.chatService.deleteChat(sessionId, dto);
   }
 

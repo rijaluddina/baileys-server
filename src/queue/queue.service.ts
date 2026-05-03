@@ -22,6 +22,9 @@ export class QueueService {
 
     @InjectQueue(QUEUE_NAMES.MESSAGE_CLEANUP)
     private readonly messageCleanupQueue: Queue,
+
+    @InjectQueue(QUEUE_NAMES.HISTORY_SYNC)
+    private readonly historySyncQueue: Queue,
   ) {}
 
   async addMessageStoreJob(sessionId: string, messages: unknown[]) {
@@ -31,6 +34,17 @@ export class QueueService {
       {
         attempts: 3,
         backoff: { type: 'exponential', delay: 1000 },
+      },
+    );
+  }
+
+  async addHistorySyncJob(sessionId: string, data: unknown) {
+    await this.historySyncQueue.add(
+      'history-sync',
+      { sessionId, data },
+      {
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 2000 },
       },
     );
   }
@@ -65,7 +79,13 @@ export class QueueService {
   ) {
     await this.webhookDeliveryQueue.add(
       'deliver-webhook',
-      { sessionId, webhookUrl, event, data, timestamp: new Date().toISOString() },
+      {
+        sessionId,
+        webhookUrl,
+        event,
+        data,
+        timestamp: new Date().toISOString(),
+      },
       {
         attempts: 5,
         backoff: { type: 'exponential', delay: 2000 },

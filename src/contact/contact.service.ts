@@ -11,7 +11,8 @@ export class ContactService {
 
   async checkNumberExists(sessionId: string, dto: CheckNumberDto) {
     const socket = this.sessionService.getSocket(sessionId);
-    const results: Array<{ number: string; exists: boolean; jid?: string }> = [];
+    const results: Array<{ number: string; exists: boolean; jid?: string }> =
+      [];
 
     for (const number of dto.numbers) {
       try {
@@ -34,7 +35,10 @@ export class ContactService {
   async getProfilePicture(sessionId: string, jid: string, highRes = false) {
     const socket = this.sessionService.getSocket(sessionId);
     try {
-      const url = await socket.profilePictureUrl(jid, highRes ? 'image' : 'preview');
+      const url = await socket.profilePictureUrl(
+        jid,
+        highRes ? 'image' : 'preview',
+      );
       return { jid, profilePictureUrl: url };
     } catch {
       return { jid, profilePictureUrl: null };
@@ -51,7 +55,10 @@ export class ContactService {
     }
   }
 
-  async updateBusinessProfile(sessionId: string, dto: import('./dto/contact.dto.js').UpdateBusinessProfileDto) {
+  async updateBusinessProfile(
+    sessionId: string,
+    dto: import('./dto/contact.dto.js').UpdateBusinessProfileDto,
+  ) {
     const socket = this.sessionService.getSocket(sessionId);
     // Note: Baileys has a typo in the method name (updateBussinesProfile)
     await socket.updateBussinesProfile(dto);
@@ -85,8 +92,10 @@ export class ContactService {
 
     let imageBuffer: Buffer;
     if (dto.image.startsWith('http')) {
-      const response = await axios.get(dto.image, { responseType: 'arraybuffer' });
-      imageBuffer = Buffer.from(response.data);
+      const response = await axios.get(dto.image, {
+        responseType: 'arraybuffer',
+      });
+      imageBuffer = Buffer.from(response.data as ArrayBuffer);
     } else {
       imageBuffer = Buffer.from(dto.image, 'base64');
     }
@@ -110,7 +119,12 @@ export class ContactService {
     return { status: 'updated' };
   }
 
-  async getContacts(sessionId: string, search?: string, limit = 50, offset = 0) {
+  async getContacts(
+    sessionId: string,
+    search?: string,
+    limit = 50,
+    offset = 0,
+  ) {
     // Now reads from database with search and pagination
     return this.sessionService.getContacts(sessionId, search, limit, offset);
   }

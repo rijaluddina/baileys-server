@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, IsArray, IsNumber, IsBoolean, ValidateNested } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsArray,
+  IsNumber,
+  IsBoolean,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SendTextDto {
@@ -73,7 +81,11 @@ export class SendContactDto {
   })
   @IsArray()
   @IsNotEmpty()
-  contacts!: Array<{ fullName: string; phoneNumber: string; organization?: string }>;
+  contacts!: Array<{
+    fullName: string;
+    phoneNumber: string;
+    organization?: string;
+  }>;
 }
 
 export class SendLocationDto {
@@ -149,7 +161,11 @@ export class SendButtonsDto {
 
   @ApiProperty({ description: 'Button objects' })
   @IsArray()
-  buttons!: Array<{ buttonId: string; buttonText: { displayText: string }; type: number }>;
+  buttons!: Array<{
+    buttonId: string;
+    buttonText: { displayText: string };
+    type: number;
+  }>;
 }
 
 export class SendListDto {
@@ -197,7 +213,10 @@ export class SendReactionDto {
   @IsNotEmpty()
   messageId!: string;
 
-  @ApiProperty({ description: 'Emoji reaction (empty string to remove)', example: '👍' })
+  @ApiProperty({
+    description: 'Emoji reaction (empty string to remove)',
+    example: '👍',
+  })
   @IsString()
   reaction!: string;
 }
@@ -285,12 +304,18 @@ export class SendStatusDto {
   @IsString()
   caption?: string;
 
-  @ApiPropertyOptional({ description: 'Background color for text status', example: '#FF0000' })
+  @ApiPropertyOptional({
+    description: 'Background color for text status',
+    example: '#FF0000',
+  })
   @IsOptional()
   @IsString()
   backgroundColor?: string;
 
-  @ApiPropertyOptional({ description: 'Font for text status (0-5)', default: 0 })
+  @ApiPropertyOptional({
+    description: 'Font for text status (0-5)',
+    default: 0,
+  })
   @IsOptional()
   @IsNumber()
   font?: number;

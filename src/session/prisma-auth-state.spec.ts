@@ -1,4 +1,7 @@
-import { usePrismaAuthState } from './prisma-auth-state';
+import { usePrismaAuthState } from './prisma-auth-state.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { Logger } from '@nestjs/common';
+import type { SignalDataTypeMap } from '@whiskeysockets/baileys';
 
 jest.mock('@whiskeysockets/baileys', () => ({
   initAuthCreds: jest.fn(() => ({})),
@@ -9,7 +12,7 @@ jest.mock('@whiskeysockets/baileys', () => ({
   proto: {
     Message: {
       AppStateSyncKeyData: {
-        fromObject: jest.fn((value) => value),
+        fromObject: jest.fn((value: unknown) => value),
       },
     },
   },
@@ -21,17 +24,25 @@ describe('usePrismaAuthState', () => {
       authCredential: {
         findUnique: jest.fn().mockResolvedValue(null),
         findMany: jest.fn(),
-        upsert: jest.fn((args) => ({ operation: 'upsert', args })),
-        deleteMany: jest.fn((args) => ({ operation: 'deleteMany', args })),
+        upsert: jest.fn((args: unknown) => ({ operation: 'upsert', args })),
+        deleteMany: jest.fn((args: unknown) => ({
+          operation: 'deleteMany',
+          args,
+        })),
       },
       $transaction: jest.fn().mockResolvedValue(undefined),
     };
-    const { state } = await usePrismaAuthState('session-1', prisma as any);
+    const logger = { error: jest.fn() } as unknown as Logger;
+    const { state } = await usePrismaAuthState(
+      'session-1',
+      prisma as unknown as PrismaService,
+      logger,
+    );
 
     await state.keys.set({
       session: {
-        'key-1': { value: 'stored' } as any,
-        'key-2': null as any,
+        'key-1': { value: 'stored' } as unknown as SignalDataTypeMap['session'],
+        'key-2': null,
       },
     });
 
