@@ -12,7 +12,9 @@ import { Server, Socket } from 'socket.io';
   cors: { origin: '*' },
   namespace: '/ws',
 })
-export class SessionGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class SessionGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   private readonly logger = new Logger(SessionGateway.name);
 
   @WebSocketServer()

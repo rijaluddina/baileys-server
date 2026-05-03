@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, IsEnum, IsArray, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEnum } from 'class-validator';
 
 // === Presence ===
 export enum PresenceType {
@@ -66,7 +66,16 @@ export enum PrivacyValue {
 }
 
 export class UpdatePrivacyDto {
-  @ApiProperty({ enum: ['last-seen', 'online', 'profile-picture', 'about', 'groups', 'read-receipts'] })
+  @ApiProperty({
+    enum: [
+      'last-seen',
+      'online',
+      'profile-picture',
+      'about',
+      'groups',
+      'read-receipts',
+    ],
+  })
   @IsString()
   @IsNotEmpty()
   setting!: string;

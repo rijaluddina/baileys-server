@@ -34,7 +34,9 @@ export class MessagingController {
   }
 
   @Post('media')
-  @ApiOperation({ summary: 'Send media (image, video, audio, document, sticker)' })
+  @ApiOperation({
+    summary: 'Send media (image, video, audio, document, sticker)',
+  })
   @ApiParam({ name: 'sessionId' })
   sendMedia(@Param('sessionId') sessionId: string, @Body() dto: SendMediaDto) {
     return this.messagingService.sendMedia(sessionId, dto);
@@ -43,14 +45,20 @@ export class MessagingController {
   @Post('contact')
   @ApiOperation({ summary: 'Send contact card (vCard)' })
   @ApiParam({ name: 'sessionId' })
-  sendContact(@Param('sessionId') sessionId: string, @Body() dto: SendContactDto) {
+  sendContact(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SendContactDto,
+  ) {
     return this.messagingService.sendContact(sessionId, dto);
   }
 
   @Post('location')
   @ApiOperation({ summary: 'Send location' })
   @ApiParam({ name: 'sessionId' })
-  sendLocation(@Param('sessionId') sessionId: string, @Body() dto: SendLocationDto) {
+  sendLocation(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SendLocationDto,
+  ) {
     return this.messagingService.sendLocation(sessionId, dto);
   }
 
@@ -64,7 +72,10 @@ export class MessagingController {
   @Post('buttons')
   @ApiOperation({ summary: 'Send buttons message' })
   @ApiParam({ name: 'sessionId' })
-  sendButtons(@Param('sessionId') sessionId: string, @Body() dto: SendButtonsDto) {
+  sendButtons(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SendButtonsDto,
+  ) {
     return this.messagingService.sendButtons(sessionId, dto);
   }
 
@@ -78,49 +89,70 @@ export class MessagingController {
   @Post('reaction')
   @ApiOperation({ summary: 'Send reaction emoji to a message' })
   @ApiParam({ name: 'sessionId' })
-  sendReaction(@Param('sessionId') sessionId: string, @Body() dto: SendReactionDto) {
+  sendReaction(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SendReactionDto,
+  ) {
     return this.messagingService.sendReaction(sessionId, dto);
   }
 
   @Post('edit')
   @ApiOperation({ summary: 'Edit a sent message' })
   @ApiParam({ name: 'sessionId' })
-  editMessage(@Param('sessionId') sessionId: string, @Body() dto: EditMessageDto) {
+  editMessage(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: EditMessageDto,
+  ) {
     return this.messagingService.editMessage(sessionId, dto);
   }
 
   @Post('delete')
   @ApiOperation({ summary: 'Delete a message (for everyone or just me)' })
   @ApiParam({ name: 'sessionId' })
-  deleteMessage(@Param('sessionId') sessionId: string, @Body() dto: DeleteMessageDto) {
+  deleteMessage(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: DeleteMessageDto,
+  ) {
     return this.messagingService.deleteMessage(sessionId, dto);
   }
 
   @Post('forward')
   @ApiOperation({ summary: 'Forward a message to another chat' })
   @ApiParam({ name: 'sessionId' })
-  forwardMessage(@Param('sessionId') sessionId: string, @Body() dto: ForwardMessageDto) {
+  forwardMessage(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: ForwardMessageDto,
+  ) {
     return this.messagingService.forwardMessage(sessionId, dto);
   }
 
   @Post('read')
   @ApiOperation({ summary: 'Mark messages as read' })
   @ApiParam({ name: 'sessionId' })
-  readMessages(@Param('sessionId') sessionId: string, @Body() dto: ReadMessagesDto) {
+  readMessages(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: ReadMessagesDto,
+  ) {
     return this.messagingService.readMessages(sessionId, dto);
   }
 
   @Post('star')
   @ApiOperation({ summary: 'Star or unstar messages' })
   @ApiParam({ name: 'sessionId' })
-  starMessages(@Param('sessionId') sessionId: string, @Body() dto: StarMessageDto) {
+  starMessages(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: StarMessageDto,
+  ) {
     return this.messagingService.starMessages(sessionId, dto);
   }
 
   @Post('status')
   @ApiOperation({ summary: 'Post a status/story (text, image, or video)' })
   @ApiParam({ name: 'sessionId' })
-  sendStatus(@Param('sessionId') sessionId: string, @Body() dto: SendStatusDto) {
+  sendStatus(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SendStatusDto,
+  ) {
     return this.messagingService.sendStatus(sessionId, dto);
   }
 
@@ -131,6 +163,11 @@ export class MessagingController {
     @Param('sessionId') sessionId: string,
     @Body() body: { to: string; url: string; text?: string },
   ) {
-    return this.messagingService.sendLinkPreview(sessionId, body.to, body.url, body.text);
+    return this.messagingService.sendLinkPreview(
+      sessionId,
+      body.to,
+      body.url,
+      body.text,
+    );
   }
 }

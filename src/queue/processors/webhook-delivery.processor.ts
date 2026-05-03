@@ -8,7 +8,7 @@ import type { Prisma } from '../../generated/prisma/client/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { QUEUE_NAMES } from '../queue.constants.js';
 
-interface WebhookJob {
+export interface WebhookJob {
   sessionId: string;
   webhookUrl: string;
   event: string;
@@ -24,7 +24,17 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown error';
 }
 
-@Processor(QUEUE_NAMES.WEBHOOK_DELIVERY)
+@Processor(QUEUE_NAMES.WEBHOOK_DELIVERY, {
+  settings: {
+    backoffStrategy: (attemptsMade: number, type: string) => {
+      if (type === 'webhookBackoff') {
+        const delays = [0, 1000, 3000, 10000];
+        return delays[attemptsMade - 1] ?? 10000;
+      }
+      return 1000;
+    },
+  },
+})
 export class WebhookDeliveryProcessor extends WorkerHost {
   private readonly logger = new Logger(WebhookDeliveryProcessor.name);
   private readonly secret: string;
@@ -80,11 +90,17 @@ export class WebhookDeliveryProcessor extends WorkerHost {
         },
       });
 
-      this.logger.debug(`Webhook delivered: ${event} → ${webhookUrl} (${response.status})`);
+      this.logger.debug(
+        `Webhook delivered: ${event} → ${webhookUrl} (${response.status})`,
+      );
     } catch (error: unknown) {
-      const statusCode = axios.isAxiosError(error) ? (error.response?.status ?? null) : null;
+      const statusCode = axios.isAxiosError(error)
+        ? (error.response?.status ?? null)
+        : null;
       const errorMessage = getErrorMessage(error);
-      const responseData = axios.isAxiosError(error) ? error.response?.data : undefined;
+      const responseData = axios.isAxiosError(error)
+        ? (error.response?.data as unknown)
+        : undefined;
 
       await this.createWebhookLog({
         data: {
@@ -111,11 +127,15 @@ export class WebhookDeliveryProcessor extends WorkerHost {
     }
   }
 
-  private async createWebhookLog(args: Parameters<PrismaService['webhookLog']['create']>[0]) {
+  private async createWebhookLog(
+    args: Parameters<PrismaService['webhookLog']['create']>[0],
+  ) {
     try {
       await this.prisma.webhookLog.create(args);
     } catch (error: unknown) {
-      this.logger.error(`Failed to write webhook log: ${getErrorMessage(error)}`);
+      this.logger.error(
+        `Failed to write webhook log: ${getErrorMessage(error)}`,
+      );
     }
   }
 }

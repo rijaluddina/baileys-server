@@ -5,7 +5,9 @@ describe('ApiKeyGuard', () => {
   const handler = jest.fn();
   class TestController {}
 
-  function createContext(headers: Record<string, string | undefined> = {}): ExecutionContext {
+  function createContext(
+    headers: Record<string, string | undefined> = {},
+  ): ExecutionContext {
     return {
       getHandler: () => handler,
       getClass: () => TestController,
@@ -15,7 +17,10 @@ describe('ApiKeyGuard', () => {
     } as ExecutionContext;
   }
 
-  function createGuard(options: { configuredKey?: string; isPublic?: boolean }) {
+  function createGuard(options: {
+    configuredKey?: string;
+    isPublic?: boolean;
+  }) {
     const configService = {
       get: jest.fn().mockReturnValue(options.configuredKey),
     };
@@ -31,7 +36,10 @@ describe('ApiKeyGuard', () => {
   }
 
   it('allows public routes without checking API key configuration', () => {
-    const { guard, configService } = createGuard({ configuredKey: 'secret', isPublic: true });
+    const { guard, configService } = createGuard({
+      configuredKey: 'secret',
+      isPublic: true,
+    });
 
     expect(guard.canActivate(createContext())).toBe(true);
     expect(configService.get).not.toHaveBeenCalled();
@@ -54,14 +62,16 @@ describe('ApiKeyGuard', () => {
   it('rejects requests with the wrong API key', () => {
     const { guard } = createGuard({ configuredKey: 'secret' });
 
-    expect(() => guard.canActivate(createContext({ 'x-api-key': 'wrong' }))).toThrow(
-      new UnauthorizedException('Invalid API key'),
-    );
+    expect(() =>
+      guard.canActivate(createContext({ 'x-api-key': 'wrong' })),
+    ).toThrow(new UnauthorizedException('Invalid API key'));
   });
 
   it('allows requests with the configured API key', () => {
     const { guard } = createGuard({ configuredKey: 'secret' });
 
-    expect(guard.canActivate(createContext({ 'x-api-key': 'secret' }))).toBe(true);
+    expect(guard.canActivate(createContext({ 'x-api-key': 'secret' }))).toBe(
+      true,
+    );
   });
 });

@@ -59,7 +59,10 @@ export class ChatSyncProcessor extends WorkerHost {
           unreadCount: chat.unreadCount ?? undefined,
           archived: chat.archive ?? undefined,
           pinned: chat.pin !== undefined ? !!chat.pin : undefined,
-          muted: chat.mute !== undefined ? (chat.mute != null && chat.mute > 0) : undefined,
+          muted:
+            chat.mute !== undefined
+              ? chat.mute != null && chat.mute > 0
+              : undefined,
         },
       });
     });
@@ -68,10 +71,14 @@ export class ChatSyncProcessor extends WorkerHost {
       try {
         await this.prisma.$transaction(operations);
       } catch (err) {
-        this.logger.warn(`Failed to sync chats for session ${sessionId}: ${err}`);
+        this.logger.warn(
+          `Failed to sync chats for session ${sessionId}: ${err}`,
+        );
       }
     }
 
-    this.logger.debug(`Synced ${operations.length}/${chats.length} chats for session ${sessionId}`);
+    this.logger.debug(
+      `Synced ${operations.length}/${chats.length} chats for session ${sessionId}`,
+    );
   }
 }

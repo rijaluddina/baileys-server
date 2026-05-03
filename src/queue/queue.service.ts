@@ -22,6 +22,9 @@ export class QueueService {
 
     @InjectQueue(QUEUE_NAMES.MESSAGE_CLEANUP)
     private readonly messageCleanupQueue: Queue,
+
+    @InjectQueue(QUEUE_NAMES.HISTORY_SYNC)
+    private readonly historySyncQueue: Queue,
   ) {}
 
   async addMessageStoreJob(sessionId: string, messages: unknown[]) {
@@ -31,6 +34,17 @@ export class QueueService {
       {
         attempts: 3,
         backoff: { type: 'exponential', delay: 1000 },
+      },
+    );
+  }
+
+  async addHistorySyncJob(sessionId: string, data: unknown) {
+    await this.historySyncQueue.add(
+      'history-sync',
+      { sessionId, data },
+      {
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 2000 },
       },
     );
   }
@@ -65,12 +79,44 @@ export class QueueService {
   ) {
     await this.webhookDeliveryQueue.add(
       'deliver-webhook',
-      { sessionId, webhookUrl, event, data, timestamp: new Date().toISOString() },
+      {
+        sessionId,
+        webhookUrl,
+        event,
+        data,
+        timestamp: new Date().toISOString(),
+      },
       {
         attempts: 5,
-        backoff: { type: 'exponential', delay: 2000 },
+        backoff: { type: 'webhookBackoff' },
       },
     );
+  }
+
+  async getFailedWebhookJobs() {
+    return this.webhookDeliveryQueue.getFailed();
+  }
+
+  async replayWebhookJob(jobId: string) {
+    const job = await this.webhookDeliveryQueue.getJob(jobId);
+    if (!job) {
+      throw new Error(`Job ${jobId} not found in webhook delivery queue`);
+    }
+    if (await job.isFailed()) {
+      await job.retry();
+      return true;
+    }
+    return false;
+  }
+
+  async replayAllFailedWebhookJobs() {
+    const failedJobs = await this.webhookDeliveryQueue.getFailed();
+    let replayed = 0;
+    for (const job of failedJobs) {
+      await job.retry();
+      replayed++;
+    }
+    return { replayed, total: failedJobs.length };
   }
 
   async scheduleMessageCleanup() {

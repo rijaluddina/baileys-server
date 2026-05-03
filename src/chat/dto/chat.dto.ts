@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsBoolean,
+} from 'class-validator';
 
 export class ArchiveChatDto {
   @ApiProperty({ example: '6281234567890@s.whatsapp.net' })
@@ -29,7 +35,9 @@ export class MuteChatDto {
   @IsNotEmpty()
   jid!: string;
 
-  @ApiPropertyOptional({ description: 'Mute duration in ms (null = forever, 0 = unmute)' })
+  @ApiPropertyOptional({
+    description: 'Mute duration in ms (null = forever, 0 = unmute)',
+  })
   @IsOptional()
   @IsNumber()
   duration?: number;
@@ -43,7 +51,10 @@ export class DeleteChatDto {
 }
 
 export class FetchMessagesDto {
-  @ApiPropertyOptional({ description: 'Number of messages to fetch', default: 25 })
+  @ApiPropertyOptional({
+    description: 'Number of messages to fetch',
+    default: 25,
+  })
   @IsOptional()
   @IsNumber()
   limit?: number;

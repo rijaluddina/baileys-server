@@ -22,7 +22,10 @@ export class ChatService {
 
   async archiveChat(sessionId: string, dto: ArchiveChatDto) {
     const socket = this.sessionService.getSocket(sessionId);
-    const modification: ChatModification = { archive: dto.archive, lastMessages: [] };
+    const modification: ChatModification = {
+      archive: dto.archive,
+      lastMessages: [],
+    };
     await socket.chatModify(modification, dto.jid);
     return { status: dto.archive ? 'archived' : 'unarchived' };
   }
@@ -36,15 +39,21 @@ export class ChatService {
 
   async muteChat(sessionId: string, dto: MuteChatDto) {
     const socket = this.sessionService.getSocket(sessionId);
-    const mute = dto.duration === 0 ? null : (dto.duration ?? 8 * 60 * 60 * 1000);
-    const modification: ChatModification = { mute: mute ? Date.now() + mute : null };
+    const mute =
+      dto.duration === 0 ? null : (dto.duration ?? 8 * 60 * 60 * 1000);
+    const modification: ChatModification = {
+      mute: mute ? Date.now() + mute : null,
+    };
     await socket.chatModify(modification, dto.jid);
     return { status: mute ? 'muted' : 'unmuted' };
   }
 
   async markChatRead(sessionId: string, dto: MarkChatReadDto) {
     const socket = this.sessionService.getSocket(sessionId);
-    const modification: ChatModification = { markRead: dto.read, lastMessages: [] };
+    const modification: ChatModification = {
+      markRead: dto.read,
+      lastMessages: [],
+    };
     await socket.chatModify(modification, dto.jid);
     return { status: dto.read ? 'read' : 'unread' };
   }

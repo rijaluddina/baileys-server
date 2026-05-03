@@ -6,6 +6,7 @@ import { ContactSyncProcessor } from './processors/contact-sync.processor.js';
 import { ChatSyncProcessor } from './processors/chat-sync.processor.js';
 import { WebhookDeliveryProcessor } from './processors/webhook-delivery.processor.js';
 import { MessageCleanupProcessor } from './processors/message-cleanup.processor.js';
+import { HistorySyncProcessor } from './processors/history-sync.processor.js';
 import { QueueService } from './queue.service.js';
 
 import { QUEUE_NAMES } from './queue.constants.js';
@@ -34,6 +35,7 @@ import { QUEUE_NAMES } from './queue.constants.js';
       { name: QUEUE_NAMES.CHAT_SYNC },
       { name: QUEUE_NAMES.WEBHOOK_DELIVERY },
       { name: QUEUE_NAMES.MESSAGE_CLEANUP },
+      { name: QUEUE_NAMES.HISTORY_SYNC },
     ),
   ],
   providers: [
@@ -43,7 +45,8 @@ import { QUEUE_NAMES } from './queue.constants.js';
     ChatSyncProcessor,
     WebhookDeliveryProcessor,
     MessageCleanupProcessor,
+    HistorySyncProcessor,
   ],
   exports: [QueueService, BullModule],
 })
-export class QueueModule { }
+export class QueueModule {}

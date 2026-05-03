@@ -1,7 +1,13 @@
 import { ConflictException } from '@nestjs/common';
 import { SessionService } from './session.service';
 import { usePrismaAuthState } from './prisma-auth-state';
-import makeWASocket, { fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
+import makeWASocket, {
+  fetchLatestBaileysVersion,
+} from '@whiskeysockets/baileys';
+import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { QueueService } from '../queue/queue.service.js';
 
 jest.mock('@whiskeysockets/baileys', () => ({
   __esModule: true,
@@ -25,12 +31,16 @@ describe('SessionService', () => {
 
   function createService(prismaOverrides: Record<string, unknown> = {}) {
     const eventHandlers = new Map<string, (...args: any[]) => unknown>();
-    socket.ev.on.mockImplementation((event: string, handler: (...args: any[]) => unknown) => {
-      eventHandlers.set(event, handler);
-    });
+    socket.ev.on.mockImplementation(
+      (event: string, handler: (...args: any[]) => unknown) => {
+        eventHandlers.set(event, handler);
+      },
+    );
 
     const configService = {
-      get: jest.fn((key: string) => (key === 'WEBHOOK_URL' ? 'https://example.test/webhook' : undefined)),
+      get: jest.fn((key: string) =>
+        key === 'WEBHOOK_URL' ? 'https://example.test/webhook' : undefined,
+      ),
     };
     const eventEmitter = { emit: jest.fn() };
     const prisma = {
@@ -56,10 +66,10 @@ describe('SessionService', () => {
 
     return {
       service: new SessionService(
-        configService as any,
-        eventEmitter as any,
-        prisma as any,
-        queueService as any,
+        configService as unknown as ConfigService,
+        eventEmitter as unknown as EventEmitter2,
+        prisma as unknown as PrismaService,
+        queueService as unknown as QueueService,
       ),
       prisma,
       eventHandlers,
@@ -69,7 +79,9 @@ describe('SessionService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (makeWASocket as jest.Mock).mockReturnValue(socket);
-    (fetchLatestBaileysVersion as jest.Mock).mockResolvedValue({ version: [2, 3000, 0] });
+    (fetchLatestBaileysVersion as jest.Mock).mockResolvedValue({
+      version: [2, 3000, 0],
+    });
     (usePrismaAuthState as jest.Mock).mockResolvedValue({
       state: { creds: {}, keys: {} },
       saveCreds: jest.fn(),
@@ -100,7 +112,9 @@ describe('SessionService', () => {
     const { service } = createService();
     await service.createSession('session-1');
 
-    await expect(service.createSession('session-1')).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.createSession('session-1')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 
   it('returns a stored WhatsApp message for quoting', async () => {
@@ -121,7 +135,11 @@ describe('SessionService', () => {
     });
 
     await expect(
-      service.findMessage('session-1', '6281234567890@s.whatsapp.net', 'message-1'),
+      service.findMessage(
+        'session-1',
+        '6281234567890@s.whatsapp.net',
+        'message-1',
+      ),
     ).resolves.toEqual(storedMessage.content);
 
     expect(prisma.message.findFirst).toHaveBeenCalledWith({
@@ -146,7 +164,14 @@ describe('SessionService', () => {
       lastDisconnect: { error: { output: { statusCode: 500 } } },
     });
 
-    const reconnectSpy = jest.spyOn(service, 'createSession').mockResolvedValue({ sessionId: 'session-1', status: 'connecting' });
+    const reconnectSpy = jest
+      .spyOn(service, 'createSession')
+      .mockResolvedValue({
+        sessionId: 'session-1',
+        status: 'connecting',
+        qr: undefined,
+        pairingCode: undefined,
+      });
 
     await service.deleteSession('session-1');
     await jest.runOnlyPendingTimersAsync();

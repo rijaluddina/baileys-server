@@ -6,9 +6,11 @@ describe('getCorsOrigin', () => {
   });
 
   it('parses a comma-separated CORS_ORIGIN allowlist', () => {
-    expect(getCorsOrigin('https://app.example.test, https://admin.example.test', 'production')).toEqual([
-      'https://app.example.test',
-      'https://admin.example.test',
-    ]);
+    expect(
+      getCorsOrigin(
+        'https://app.example.test, https://admin.example.test',
+        'production',
+      ),
+    ).toEqual(['https://app.example.test', 'https://admin.example.test']);
   });
 });

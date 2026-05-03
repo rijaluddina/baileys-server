@@ -4,4 +4,5 @@ export const QUEUE_NAMES = {
   CHAT_SYNC: 'chat-sync',
   WEBHOOK_DELIVERY: 'webhook-delivery',
   MESSAGE_CLEANUP: 'message-cleanup',
+  HISTORY_SYNC: 'history-sync',
 } as const;
