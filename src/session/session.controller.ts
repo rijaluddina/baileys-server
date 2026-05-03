@@ -8,6 +8,8 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,6 +18,9 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Observable, fromEvent, merge } from 'rxjs';
+import { filter, map, takeUntil } from 'rxjs/operators';
 import { SessionService } from './session.service.js';
 import { CreateSessionDto } from './dto/session.dto.js';
 
@@ -23,7 +28,35 @@ import { CreateSessionDto } from './dto/session.dto.js';
 @ApiSecurity('x-api-key')
 @Controller('sessions')
 export class SessionController {
-  constructor(private readonly sessionService: SessionService) {}
+  constructor(
+    private readonly sessionService: SessionService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
+
+  @Sse(':sessionId/qr/stream')
+  @ApiOperation({ summary: 'Stream QR code events via SSE' })
+  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  qrStream(@Param('sessionId') sessionId: string): Observable<MessageEvent> {
+    const qrEvent$ = fromEvent(this.eventEmitter, 'session.qr').pipe(
+      filter((payload: any) => payload.sessionId === sessionId),
+      map((payload: any) => ({
+        data: { qr: payload.qr },
+        type: 'qr',
+      }) as MessageEvent),
+    );
+
+    const connected$ = fromEvent(this.eventEmitter, 'session.connected').pipe(
+      filter((payload: any) => payload.sessionId === sessionId),
+    );
+
+    const loggedOut$ = fromEvent(this.eventEmitter, 'session.logged-out').pipe(
+      filter((payload: any) => payload.sessionId === sessionId),
+    );
+
+    const close$ = merge(connected$, loggedOut$);
+
+    return qrEvent$.pipe(takeUntil(close$));
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a new WhatsApp session' })

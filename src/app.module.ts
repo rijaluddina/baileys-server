@@ -13,6 +13,7 @@ import { ChatModule } from './chat/chat.module.js';
 import { ContactModule } from './contact/contact.module.js';
 import { MiscModule } from './misc/misc.module.js';
 import { HealthModule } from './health/health.module.js';
+import { WebhookModule } from './webhook/webhook.module.js';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { HealthModule } from './health/health.module.js';
     ContactModule,
     MiscModule,
     HealthModule,
+    WebhookModule,
   ],
   providers: [
     {

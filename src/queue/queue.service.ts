@@ -88,9 +88,35 @@ export class QueueService {
       },
       {
         attempts: 5,
-        backoff: { type: 'exponential', delay: 2000 },
+        backoff: { type: 'webhookBackoff' },
       },
     );
+  }
+
+  async getFailedWebhookJobs() {
+    return this.webhookDeliveryQueue.getFailed();
+  }
+
+  async replayWebhookJob(jobId: string) {
+    const job = await this.webhookDeliveryQueue.getJob(jobId);
+    if (!job) {
+      throw new Error(`Job ${jobId} not found in webhook delivery queue`);
+    }
+    if (await job.isFailed()) {
+      await job.retry();
+      return true;
+    }
+    return false;
+  }
+
+  async replayAllFailedWebhookJobs() {
+    const failedJobs = await this.webhookDeliveryQueue.getFailed();
+    let replayed = 0;
+    for (const job of failedJobs) {
+      await job.retry();
+      replayed++;
+    }
+    return { replayed, total: failedJobs.length };
   }
 
   async scheduleMessageCleanup() {

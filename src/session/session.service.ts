@@ -87,21 +87,27 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       where: { status: 'open' },
     });
 
-    if (sessionsToReconnect.length === 0) {
+    const total = sessionsToReconnect.length;
+    if (total === 0) {
       this.logger.log('No sessions to auto-reconnect');
       return;
     }
 
-    this.logger.log(
-      `Auto-reconnecting ${sessionsToReconnect.length} session(s)...`,
-    );
+    this.logger.log(`Auto-reconnecting ${total} session(s) with staggered start...`);
 
-    for (const dbSession of sessionsToReconnect) {
+    for (let i = 0; i < total; i++) {
+      const dbSession = sessionsToReconnect[i];
       try {
+        this.logger.log(`Reconnecting session ${i + 1}/${total} ("${dbSession.id}")...`);
         await this.createSession(dbSession.id, {
           webhookUrl: dbSession.webhookUrl ?? undefined,
         });
-        this.logger.log(`Auto-reconnected session "${dbSession.id}"`);
+        
+        // Stagger: 500ms base + up to 500ms jitter
+        if (i < total - 1) {
+          const jitter = Math.floor(Math.random() * 500);
+          await new Promise((resolve) => setTimeout(resolve, 500 + jitter));
+        }
       } catch (err) {
         this.logger.error(
           `Failed to auto-reconnect session "${dbSession.id}": ${err}`,

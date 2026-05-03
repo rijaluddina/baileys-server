@@ -24,7 +24,17 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown error';
 }
 
-@Processor(QUEUE_NAMES.WEBHOOK_DELIVERY)
+@Processor(QUEUE_NAMES.WEBHOOK_DELIVERY, {
+  settings: {
+    backoffStrategy: (attemptsMade: number, type: string) => {
+      if (type === 'webhookBackoff') {
+        const delays = [0, 1000, 3000, 10000];
+        return delays[attemptsMade - 1] ?? 10000;
+      }
+      return 1000;
+    },
+  },
+})
 export class WebhookDeliveryProcessor extends WorkerHost {
   private readonly logger = new Logger(WebhookDeliveryProcessor.name);
   private readonly secret: string;
