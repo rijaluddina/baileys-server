@@ -162,7 +162,12 @@ describe('SessionService', () => {
 
     const reconnectSpy = jest
       .spyOn(service, 'createSession')
-      .mockResolvedValue({ sessionId: 'session-1', status: 'connecting', qr: undefined, pairingCode: undefined });
+      .mockResolvedValue({
+        sessionId: 'session-1',
+        status: 'connecting',
+        qr: undefined,
+        pairingCode: undefined,
+      });
 
     await service.deleteSession('session-1');
     await jest.runOnlyPendingTimersAsync();

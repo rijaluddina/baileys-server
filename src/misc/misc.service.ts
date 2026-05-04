@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SessionService } from '../session/session.service.js';
 import {
   SetPresenceDto,
-  UpdatePrivacyDto,
   CreateNewsletterDto,
   SendNewsletterMessageDto,
 } from './dto/misc.dto.js';
@@ -27,7 +26,7 @@ export class MiscService {
   }
 
   // === Labels ===
-  async getLabels(sessionId: string) {
+  getLabels(sessionId: string) {
     // Labels are delivered via events (labels.edit, labels.association)
     this.sessionService.getSocket(sessionId);
     return {
@@ -209,6 +208,7 @@ export class MiscService {
     after: number,
   ) {
     const socket = this.sessionService.getSocket(sessionId);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return socket.newsletterFetchMessages(newsletterJid, count, since, after);
   }
 
@@ -219,7 +219,7 @@ export class MiscService {
   }
 
   // === Device Info ===
-  async getDeviceInfo(sessionId: string) {
+  getDeviceInfo(sessionId: string) {
     const socket = this.sessionService.getSocket(sessionId);
     return {
       user: socket.user,

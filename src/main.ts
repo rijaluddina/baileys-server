@@ -76,6 +76,7 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT ?? 3000;
+  app.enableShutdownHooks();
   await app.listen(port, '0.0.0.0');
 
   logger.log(`🚀 Baileys API running on http://localhost:${port}`);

@@ -19,7 +19,8 @@ export class MessageCleanupProcessor extends WorkerHost {
       this.configService?.get<number>('MESSAGE_RETENTION_DAYS', 60) || 60;
   }
 
-  async process(_job: Job): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async process(_: Job): Promise<void> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - this.retentionDays);
 

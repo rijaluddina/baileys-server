@@ -212,15 +212,14 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
         );
         // If pairing code request fails, it's often due to socket closing or rate limit
         throw new BadRequestException(
-          `Failed to request pairing code: ${err.message}`,
+          `Failed to request pairing code: ${(err as Error).message}`,
         );
       }
     }
 
     // Connection update handler
-    socket.ev.on(
-      'connection.update',
-      async (update: Partial<ConnectionState>) => {
+    socket.ev.on('connection.update', (update: Partial<ConnectionState>) => {
+      void (async () => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr && !options.pairingCode) {
@@ -247,12 +246,14 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
               data: {
                 status: 'open',
                 userJid: socket.user?.id ?? null,
-                userName: (socket.user as any)?.name ?? null,
+                userName: (socket.user as { name?: string })?.name ?? null,
                 retryCount: 0,
               },
             })
-            .catch((err) =>
-              this.logger.error(`DB update failed for ${sessionId}: ${err}`),
+            .catch((err: unknown) =>
+              this.logger.error(
+                `DB update failed for ${sessionId}: ${String(err)}`,
+              ),
             );
 
           this.eventEmitter.emit('session.connected', {
@@ -267,7 +268,10 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
         if (connection === 'close') {
           sessionData.status = 'close';
-          const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
+          const disconnectError = lastDisconnect?.error as
+            | { output?: { statusCode?: number } }
+            | undefined;
+          const statusCode = disconnectError?.output?.statusCode;
           const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
           this.logger.warn(
@@ -306,8 +310,10 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
               this.reconnectTimers.delete(sessionId);
               if (!this.sessions.has(sessionId)) return;
               this.sessions.delete(sessionId);
-              this.createSession(sessionId, options).catch((err) => {
-                this.logger.error(`Failed to reconnect "${sessionId}": ${err}`);
+              this.createSession(sessionId, options).catch((err: unknown) => {
+                this.logger.error(
+                  `Failed to reconnect "${sessionId}": ${String(err)}`,
+                );
               });
             }, delay);
             this.reconnectTimers.set(sessionId, timer);
@@ -327,20 +333,22 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
             this.emitWebhook(sessionId, 'connection', { status: 'logged-out' });
           }
         }
-      },
-    );
+      })();
+    });
 
     // Save credentials on update (to DB via Prisma)
-    socket.ev.on('creds.update', saveCreds);
+    socket.ev.on('creds.update', () => {
+      void saveCreds();
+    });
 
     // Store incoming messages via BullMQ queue
     socket.ev.on('messages.upsert', (m: BaileysEventMap['messages.upsert']) => {
       if (m.messages.length > 0) {
-        this.queueService
-          .addMessageStoreJob(sessionId, m.messages as any)
-          .catch((err) => {
+        void this.queueService
+          .addMessageStoreJob(sessionId, m.messages as unknown[])
+          .catch((err: unknown) => {
             this.logger.error(
-              `Failed to queue messages for ${sessionId}: ${err}`,
+              `Failed to queue messages for ${sessionId}: ${String(err)}`,
             );
           });
       }
@@ -348,38 +356,44 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     // Sync contacts via BullMQ queue
     socket.ev.on('contacts.upsert', (contacts) => {
-      this.queueService
-        .addContactSyncJob(sessionId, contacts as any)
-        .catch((err) => {
+      void this.queueService
+        .addContactSyncJob(sessionId, contacts as unknown[])
+        .catch((err: unknown) => {
           this.logger.error(
-            `Failed to queue contacts for ${sessionId}: ${err}`,
+            `Failed to queue contacts for ${sessionId}: ${String(err)}`,
           );
         });
     });
 
     socket.ev.on('contacts.update', (contacts) => {
-      this.queueService
-        .addContactSyncJob(sessionId, contacts as any)
-        .catch((err) => {
+      void this.queueService
+        .addContactSyncJob(sessionId, contacts as unknown[])
+        .catch((err: unknown) => {
           this.logger.error(
-            `Failed to queue contacts update for ${sessionId}: ${err}`,
+            `Failed to queue contacts update for ${sessionId}: ${String(err)}`,
           );
         });
     });
 
     // Sync chats via BullMQ queue
     socket.ev.on('chats.upsert', (chats) => {
-      this.queueService.addChatSyncJob(sessionId, chats as any).catch((err) => {
-        this.logger.error(`Failed to queue chats for ${sessionId}: ${err}`);
-      });
+      void this.queueService
+        .addChatSyncJob(sessionId, chats as unknown[])
+        .catch((err: unknown) => {
+          this.logger.error(
+            `Failed to queue chats for ${sessionId}: ${String(err)}`,
+          );
+        });
     });
 
     socket.ev.on('chats.update', (chats) => {
-      this.queueService.addChatSyncJob(sessionId, chats as any).catch((err) => {
-        this.logger.error(
-          `Failed to queue chats update for ${sessionId}: ${err}`,
-        );
-      });
+      void this.queueService
+        .addChatSyncJob(sessionId, chats as unknown[])
+        .catch((err: unknown) => {
+          this.logger.error(
+            `Failed to queue chats update for ${sessionId}: ${String(err)}`,
+          );
+        });
     });
 
     // Forward all Baileys events to webhook

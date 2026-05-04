@@ -134,8 +134,9 @@ export class GroupService {
     if (dto.image.startsWith('http')) {
       const response = await axios.get(dto.image, {
         responseType: 'arraybuffer',
+        maxContentLength: 50 * 1024 * 1024, // 50 MB
       });
-      imageBuffer = Buffer.from(response.data);
+      imageBuffer = Buffer.from(response.data as ArrayBuffer);
     } else {
       imageBuffer = Buffer.from(dto.image, 'base64');
     }

@@ -27,7 +27,10 @@ export async function usePrismaAuthState(
 
   let creds: AuthenticationCreds;
   if (credsRow) {
-    creds = JSON.parse(credsRow.value, BufferJSON.reviver);
+    creds = JSON.parse(
+      credsRow.value,
+      BufferJSON.reviver,
+    ) as AuthenticationCreds;
   } else {
     creds = initAuthCreds();
   }
@@ -65,13 +68,13 @@ export async function usePrismaAuthState(
           const prefix = `${type}-`;
           const id = row.key.slice(prefix.length);
 
-          let parsed = JSON.parse(row.value, BufferJSON.reviver);
+          let parsed = JSON.parse(row.value, BufferJSON.reviver) as unknown;
 
           if (type === 'app-state-sync-key') {
-            parsed = proto.Message.AppStateSyncKeyData.fromObject(parsed);
+            parsed = proto.Message.AppStateSyncKeyData.fromObject(parsed as Record<string, any>);
           }
 
-          result[id] = parsed;
+          result[id] = parsed as SignalDataTypeMap[typeof type];
         }
 
         return result;
@@ -110,6 +113,7 @@ export async function usePrismaAuthState(
         }
 
         if (operations.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           await prisma.$transaction(operations as any);
         }
       },

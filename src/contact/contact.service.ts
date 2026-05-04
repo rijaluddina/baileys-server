@@ -95,7 +95,7 @@ export class ContactService {
       const response = await axios.get(dto.image, {
         responseType: 'arraybuffer',
       });
-      imageBuffer = Buffer.from(response.data);
+      imageBuffer = Buffer.from(response.data as ArrayBuffer);
     } else {
       imageBuffer = Buffer.from(dto.image, 'base64');
     }

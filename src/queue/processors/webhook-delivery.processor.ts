@@ -88,7 +88,7 @@ export class WebhookDeliveryProcessor extends WorkerHost {
         ? (error.response?.status ?? null)
         : null;
       const errorMessage = getErrorMessage(error);
-      const responseData = axios.isAxiosError(error)
+      const responseData: unknown = axios.isAxiosError(error)
         ? error.response?.data
         : undefined;
 

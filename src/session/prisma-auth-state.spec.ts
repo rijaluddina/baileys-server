@@ -9,7 +9,7 @@ jest.mock('@whiskeysockets/baileys', () => ({
   proto: {
     Message: {
       AppStateSyncKeyData: {
-        fromObject: jest.fn((value) => value),
+        fromObject: jest.fn((value: unknown) => value),
       },
     },
   },
@@ -21,8 +21,11 @@ describe('usePrismaAuthState', () => {
       authCredential: {
         findUnique: jest.fn().mockResolvedValue(null),
         findMany: jest.fn(),
-        upsert: jest.fn((args) => ({ operation: 'upsert', args })),
-        deleteMany: jest.fn((args) => ({ operation: 'deleteMany', args })),
+        upsert: jest.fn((args: unknown) => ({ operation: 'upsert', args })),
+        deleteMany: jest.fn((args: unknown) => ({
+          operation: 'deleteMany',
+          args,
+        })),
       },
       $transaction: jest.fn().mockResolvedValue(undefined),
     };
@@ -30,8 +33,8 @@ describe('usePrismaAuthState', () => {
 
     await state.keys.set({
       session: {
-        'key-1': { value: 'stored' } as any,
-        'key-2': null as any,
+        'key-1': { value: 'stored' } as unknown,
+        'key-2': null,
       },
     });
 

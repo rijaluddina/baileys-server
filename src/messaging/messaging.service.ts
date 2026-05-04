@@ -74,8 +74,9 @@ export class MessagingService {
     if (dto.media.startsWith('http://') || dto.media.startsWith('https://')) {
       const response = await axios.get(dto.media, {
         responseType: 'arraybuffer',
+        maxContentLength: 50 * 1024 * 1024, // 50 MB
       });
-      mediaBuffer = Buffer.from(response.data);
+      mediaBuffer = Buffer.from(response.data as ArrayBuffer);
     } else if (dto.media.startsWith('data:')) {
       const base64Data = dto.media.split(',')[1];
       mediaBuffer = Buffer.from(base64Data, 'base64');
@@ -135,7 +136,9 @@ export class MessagingService {
         };
         break;
       default:
-        throw new BadRequestException(`Invalid media type: ${dto.type}`);
+        throw new BadRequestException(
+          `Invalid media type: ${String(dto.type)}`,
+        );
     }
 
     const result = await socket.sendMessage(jid, messageContent, opts);
@@ -368,8 +371,9 @@ export class MessagingService {
         if (dto.media.startsWith('http')) {
           const res = await axios.get(dto.media, {
             responseType: 'arraybuffer',
+            maxContentLength: 50 * 1024 * 1024,
           });
-          buffer = Buffer.from(res.data);
+          buffer = Buffer.from(res.data as ArrayBuffer);
         } else {
           buffer = Buffer.from(dto.media, 'base64');
         }
@@ -385,8 +389,9 @@ export class MessagingService {
         if (dto.media.startsWith('http')) {
           const res = await axios.get(dto.media, {
             responseType: 'arraybuffer',
+            maxContentLength: 50 * 1024 * 1024,
           });
-          buffer = Buffer.from(res.data);
+          buffer = Buffer.from(res.data as ArrayBuffer);
         } else {
           buffer = Buffer.from(dto.media, 'base64');
         }
@@ -394,7 +399,9 @@ export class MessagingService {
         break;
       }
       default:
-        throw new BadRequestException(`Invalid status type: ${dto.type}`);
+        throw new BadRequestException(
+          `Invalid status type: ${String(dto.type)}`,
+        );
     }
 
     const result = await socket.sendMessage(statusJid, messageContent, options);

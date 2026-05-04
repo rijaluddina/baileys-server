@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
+import * as crypto from 'crypto';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
 
 @Injectable()
@@ -22,14 +23,22 @@ export class ApiKeyGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const request = context.switchToHttp().getRequest();
-    const apiKey = request.headers['x-api-key'] as string;
+    const request = context
+      .switchToHttp()
+      .getRequest<{ headers: Record<string, string | string[] | undefined> }>();
+    const apiKey = request.headers['x-api-key'] as string | undefined;
     const configuredKey = this.configService.get<string>('API_KEY');
 
     if (!configuredKey) return true; // No key configured = open access
     if (!apiKey) throw new UnauthorizedException('API key is required');
-    if (apiKey !== configuredKey)
-      throw new UnauthorizedException('Invalid API key');
+
+    // Constant-time comparison to prevent timing attacks
+    const apiKeyBuffer = Buffer.from(apiKey);
+    const configuredKeyBuffer = Buffer.from(configuredKey);
+    const isMatch =
+      apiKeyBuffer.length === configuredKeyBuffer.length &&
+      crypto.timingSafeEqual(apiKeyBuffer, configuredKeyBuffer);
+    if (!isMatch) throw new UnauthorizedException('Invalid API key');
 
     return true;
   }
