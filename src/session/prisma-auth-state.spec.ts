@@ -1,4 +1,4 @@
-import { usePrismaAuthState } from './prisma-auth-state';
+import { usePrismaAuthState } from './prisma-auth-state.js';
 
 jest.mock('@whiskeysockets/baileys', () => ({
   initAuthCreds: jest.fn(() => ({})),

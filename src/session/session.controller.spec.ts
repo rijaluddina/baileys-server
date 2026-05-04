@@ -1,4 +1,4 @@
-import { SessionController } from './session.controller';
+import { SessionController } from './session.controller.js';
 
 jest.mock('@whiskeysockets/baileys', () => ({
   __esModule: true,
@@ -10,14 +10,16 @@ jest.mock('@whiskeysockets/baileys', () => ({
   },
 }));
 
-jest.mock('./prisma-auth-state', () => ({
+jest.mock('./prisma-auth-state.js', () => ({
   usePrismaAuthState: jest.fn(),
 }));
 
 describe('SessionController', () => {
   it('delegates reconnect lifecycle to SessionService', async () => {
     const sessionService = {
-      reconnectSession: jest.fn().mockResolvedValue({ sessionId: 'session-1', status: 'connecting' }),
+      reconnectSession: jest
+        .fn()
+        .mockResolvedValue({ sessionId: 'session-1', status: 'connecting' }),
     };
     const controller = new SessionController(sessionService as any);
 

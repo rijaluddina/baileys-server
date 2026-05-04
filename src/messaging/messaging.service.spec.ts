@@ -8,11 +8,11 @@ jest.mock('@whiskeysockets/baileys', () => ({
   },
 }));
 
-jest.mock('../session/prisma-auth-state', () => ({
+jest.mock('../session/prisma-auth-state.js', () => ({
   usePrismaAuthState: jest.fn(),
 }));
 
-import { MessagingService } from './messaging.service';
+import { MessagingService } from './messaging.service.js';
 
 describe('MessagingService', () => {
   it('awaits quoted message lookup before sending text replies', async () => {

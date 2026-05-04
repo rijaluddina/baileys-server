@@ -1,5 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Job } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -11,18 +11,21 @@ export class MessageCleanupProcessor extends WorkerHost {
   private readonly retentionDays: number;
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ConfigService) private readonly configService: ConfigService,
   ) {
     super();
-    this.retentionDays = this.configService.get<number>('MESSAGE_RETENTION_DAYS', 60);
+    this.retentionDays =
+      this.configService?.get<number>('MESSAGE_RETENTION_DAYS', 60) || 60;
   }
 
   async process(_job: Job): Promise<void> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - this.retentionDays);
 
-    this.logger.log(`Cleaning up messages older than ${this.retentionDays} days (before ${cutoffDate.toISOString()})`);
+    this.logger.log(
+      `Cleaning up messages older than ${this.retentionDays} days (before ${cutoffDate.toISOString()})`,
+    );
 
     // Delete old messages
     const deletedMessages = await this.prisma.message.deleteMany({

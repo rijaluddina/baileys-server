@@ -1,0 +1,1587 @@
+openapi: 3.0.0
+paths:
+  /sessions:
+    post:
+      operationId: SessionController_create
+      parameters: []
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Create a new WhatsApp session
+      tags:
+        - Session
+    get:
+      operationId: SessionController_getAll
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: List all sessions (from database)
+      tags:
+        - Session
+  /sessions/{sessionId}:
+    get:
+      operationId: SessionController_getStatus
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          description: Session ID
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get session status
+      tags:
+        - Session
+    delete:
+      operationId: SessionController_delete
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          description: Session ID
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Delete a session and remove all data
+      tags:
+        - Session
+  /sessions/{sessionId}/logout:
+    post:
+      operationId: SessionController_logout
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          description: Session ID
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Logout from WhatsApp and delete session
+      tags:
+        - Session
+  /sessions/{sessionId}/reconnect:
+    post:
+      operationId: SessionController_reconnect
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          description: Session ID
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Force reconnect a session from stored auth state
+      tags:
+        - Session
+  /sessions/{sessionId}/messages/{jid}:
+    get:
+      operationId: SessionController_getMessages
+      parameters:
+        - name: cursor
+          required: false
+          in: query
+          description: Cursor for pagination
+          schema:
+            type: string
+        - name: limit
+          required: false
+          in: query
+          description: 'Number of messages (default: 25)'
+          schema:
+            type: number
+        - name: jid
+          required: true
+          in: path
+          description: Chat JID
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          description: Session ID
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get message history for a chat (from database)
+      tags:
+        - Session
+  /sessions/{sessionId}/contacts:
+    get:
+      operationId: SessionController_getContacts
+      parameters:
+        - name: offset
+          required: false
+          in: query
+          description: 'Offset (default: 0)'
+          schema:
+            type: number
+        - name: limit
+          required: false
+          in: query
+          description: 'Limit (default: 50)'
+          schema:
+            type: number
+        - name: search
+          required: false
+          in: query
+          description: Search by name or JID
+          schema:
+            type: string
+        - name: sessionId
+          required: true
+          in: path
+          description: Session ID
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get stored contacts (from database)
+      tags:
+        - Session
+  /sessions/{sessionId}/chats:
+    get:
+      operationId: SessionController_getChats
+      parameters:
+        - name: offset
+          required: false
+          in: query
+          description: 'Offset (default: 0)'
+          schema:
+            type: number
+        - name: limit
+          required: false
+          in: query
+          description: 'Limit (default: 50)'
+          schema:
+            type: number
+        - name: sessionId
+          required: true
+          in: path
+          description: Session ID
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get stored chats (from database)
+      tags:
+        - Session
+  /sessions/{sessionId}/webhooks/logs:
+    get:
+      operationId: SessionController_getWebhookLogs
+      parameters:
+        - name: offset
+          required: false
+          in: query
+          description: 'Offset (default: 0)'
+          schema:
+            type: number
+        - name: limit
+          required: false
+          in: query
+          description: 'Limit (default: 50)'
+          schema:
+            type: number
+        - name: sessionId
+          required: true
+          in: path
+          description: Session ID
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get webhook delivery logs (from database)
+      tags:
+        - Session
+  /{sessionId}/messages/text:
+    post:
+      operationId: MessagingController_sendText
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Send a text message
+      tags:
+        - Messaging
+  /{sessionId}/messages/media:
+    post:
+      operationId: MessagingController_sendMedia
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Send media (image, video, audio, document, sticker)
+      tags:
+        - Messaging
+  /{sessionId}/messages/contact:
+    post:
+      operationId: MessagingController_sendContact
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Send contact card (vCard)
+      tags:
+        - Messaging
+  /{sessionId}/messages/location:
+    post:
+      operationId: MessagingController_sendLocation
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Send location
+      tags:
+        - Messaging
+  /{sessionId}/messages/poll:
+    post:
+      operationId: MessagingController_sendPoll
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Send a poll
+      tags:
+        - Messaging
+  /{sessionId}/messages/buttons:
+    post:
+      operationId: MessagingController_sendButtons
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Send buttons message
+      tags:
+        - Messaging
+  /{sessionId}/messages/list:
+    post:
+      operationId: MessagingController_sendList
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Send list message
+      tags:
+        - Messaging
+  /{sessionId}/messages/reaction:
+    post:
+      operationId: MessagingController_sendReaction
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Send reaction emoji to a message
+      tags:
+        - Messaging
+  /{sessionId}/messages/edit:
+    post:
+      operationId: MessagingController_editMessage
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Edit a sent message
+      tags:
+        - Messaging
+  /{sessionId}/messages/delete:
+    post:
+      operationId: MessagingController_deleteMessage
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Delete a message (for everyone or just me)
+      tags:
+        - Messaging
+  /{sessionId}/messages/forward:
+    post:
+      operationId: MessagingController_forwardMessage
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Forward a message to another chat
+      tags:
+        - Messaging
+  /{sessionId}/messages/read:
+    post:
+      operationId: MessagingController_readMessages
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Mark messages as read
+      tags:
+        - Messaging
+  /{sessionId}/messages/star:
+    post:
+      operationId: MessagingController_starMessages
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Star or unstar messages
+      tags:
+        - Messaging
+  /{sessionId}/messages/status:
+    post:
+      operationId: MessagingController_sendStatus
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Post a status/story (text, image, or video)
+      tags:
+        - Messaging
+  /{sessionId}/messages/link-preview:
+    post:
+      operationId: MessagingController_sendLinkPreview
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Send a message with link preview
+      tags:
+        - Messaging
+  /{sessionId}/groups:
+    post:
+      operationId: GroupController_create
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Create a new group
+      tags:
+        - Group
+    get:
+      operationId: GroupController_getAll
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get all groups
+      tags:
+        - Group
+  /{sessionId}/groups/{groupId}:
+    get:
+      operationId: GroupController_getMetadata
+      parameters:
+        - name: groupId
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get group metadata
+      tags:
+        - Group
+  /{sessionId}/groups/{groupId}/invite-code:
+    get:
+      operationId: GroupController_getInviteCode
+      parameters:
+        - name: groupId
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get group invite code
+      tags:
+        - Group
+  /{sessionId}/groups/{groupId}/revoke-invite:
+    post:
+      operationId: GroupController_revokeInvite
+      parameters:
+        - name: groupId
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Revoke and regenerate group invite link
+      tags:
+        - Group
+  /{sessionId}/groups/{groupId}/subject:
+    put:
+      operationId: GroupController_updateSubject
+      parameters:
+        - name: groupId
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update group subject/name
+      tags:
+        - Group
+  /{sessionId}/groups/{groupId}/description:
+    put:
+      operationId: GroupController_updateDescription
+      parameters:
+        - name: groupId
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update group description
+      tags:
+        - Group
+  /{sessionId}/groups/{groupId}/settings:
+    put:
+      operationId: GroupController_updateSettings
+      parameters:
+        - name: groupId
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update group settings (announce/restrict)
+      tags:
+        - Group
+  /{sessionId}/groups/{groupId}/participants:
+    post:
+      operationId: GroupController_modifyParticipants
+      parameters:
+        - name: groupId
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Add, remove, promote or demote participants
+      tags:
+        - Group
+  /{sessionId}/groups/{groupId}/leave:
+    delete:
+      operationId: GroupController_leave
+      parameters:
+        - name: groupId
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Leave a group
+      tags:
+        - Group
+  /{sessionId}/groups/join:
+    post:
+      operationId: GroupController_join
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Join a group via invite code
+      tags:
+        - Group
+  /{sessionId}/groups/{groupId}/picture:
+    put:
+      operationId: GroupController_updatePicture
+      parameters:
+        - name: groupId
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update group profile picture
+      tags:
+        - Group
+  /{sessionId}/groups/invite/{inviteCode}/info:
+    get:
+      operationId: GroupController_getInviteInfo
+      parameters:
+        - name: inviteCode
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get group info from invite code
+      tags:
+        - Group
+  /{sessionId}/chats:
+    get:
+      operationId: ChatController_getChats
+      parameters:
+        - name: offset
+          required: false
+          in: query
+          description: 'Offset (default: 0)'
+          schema:
+            type: number
+        - name: limit
+          required: false
+          in: query
+          description: 'Limit (default: 50)'
+          schema:
+            type: number
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get all chats (from database)
+      tags:
+        - Chat
+  /{sessionId}/chats/archive:
+    post:
+      operationId: ChatController_archive
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Archive or unarchive a chat
+      tags:
+        - Chat
+  /{sessionId}/chats/pin:
+    post:
+      operationId: ChatController_pin
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Pin or unpin a chat
+      tags:
+        - Chat
+  /{sessionId}/chats/mute:
+    post:
+      operationId: ChatController_mute
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Mute or unmute a chat
+      tags:
+        - Chat
+  /{sessionId}/chats/mark-read:
+    post:
+      operationId: ChatController_markRead
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Mark chat as read or unread
+      tags:
+        - Chat
+  /{sessionId}/chats/delete:
+    post:
+      operationId: ChatController_deleteChat
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Delete a chat
+      tags:
+        - Chat
+  /{sessionId}/chats/{jid}/messages:
+    get:
+      operationId: ChatController_fetchMessages
+      parameters:
+        - name: before
+          required: false
+          in: query
+          schema: {}
+        - name: limit
+          required: false
+          in: query
+          schema: {}
+        - name: jid
+          required: true
+          in: path
+          description: Chat JID
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Fetch messages from a chat
+      tags:
+        - Chat
+  /{sessionId}/contacts:
+    get:
+      operationId: ContactController_getContacts
+      parameters:
+        - name: offset
+          required: false
+          in: query
+          description: 'Offset (default: 0)'
+          schema:
+            type: number
+        - name: limit
+          required: false
+          in: query
+          description: 'Limit (default: 50)'
+          schema:
+            type: number
+        - name: search
+          required: false
+          in: query
+          description: Search by name or JID
+          schema:
+            type: string
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get all contacts (from database)
+      tags:
+        - Contact
+  /{sessionId}/contacts/check:
+    post:
+      operationId: ContactController_checkNumber
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Check if numbers exist on WhatsApp
+      tags:
+        - Contact
+  /{sessionId}/contacts/{jid}/profile-picture:
+    get:
+      operationId: ContactController_getProfilePicture
+      parameters:
+        - name: highRes
+          required: false
+          in: query
+          schema: {}
+        - name: jid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get profile picture URL
+      tags:
+        - Contact
+  /{sessionId}/contacts/{jid}/business-profile:
+    get:
+      operationId: ContactController_getBusinessProfile
+      parameters:
+        - name: jid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get business profile
+      tags:
+        - Contact
+  /{sessionId}/contacts/profile/business-profile:
+    post:
+      operationId: ContactController_updateBusinessProfile
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update own business profile (requires business account)
+      tags:
+        - Contact
+  /{sessionId}/contacts/{jid}/status:
+    get:
+      operationId: ContactController_getStatus
+      parameters:
+        - name: jid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get contact about/status
+      tags:
+        - Contact
+  /{sessionId}/contacts/{jid}/block:
+    post:
+      operationId: ContactController_block
+      parameters:
+        - name: jid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Block a contact
+      tags:
+        - Contact
+  /{sessionId}/contacts/{jid}/unblock:
+    post:
+      operationId: ContactController_unblock
+      parameters:
+        - name: jid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Unblock a contact
+      tags:
+        - Contact
+  /{sessionId}/contacts/profile/picture:
+    post:
+      operationId: ContactController_updateProfilePicture
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update own profile picture
+      tags:
+        - Contact
+  /{sessionId}/contacts/profile/name:
+    post:
+      operationId: ContactController_updateProfileName
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update own profile name
+      tags:
+        - Contact
+  /{sessionId}/contacts/profile/status:
+    post:
+      operationId: ContactController_updateProfileStatus
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update own about/status text
+      tags:
+        - Contact
+  /{sessionId}/presence:
+    post:
+      operationId: MiscController_setPresence
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Set presence (composing, recording, available, etc.)
+      tags:
+        - Misc
+  /{sessionId}/presence/subscribe:
+    post:
+      operationId: MiscController_subscribePresence
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Subscribe to presence updates of a contact
+      tags:
+        - Misc
+  /{sessionId}/labels:
+    get:
+      operationId: MiscController_getLabels
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get labels info (delivered via events)
+      tags:
+        - Misc
+  /{sessionId}/labels/chat/{jid}/{labelId}/add:
+    post:
+      operationId: MiscController_addChatLabel
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Add label to a chat
+      tags:
+        - Misc
+  /{sessionId}/labels/chat/{jid}/{labelId}/remove:
+    post:
+      operationId: MiscController_removeChatLabel
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Remove label from a chat
+      tags:
+        - Misc
+  /{sessionId}/labels/message/{jid}/{messageId}/{labelId}/add:
+    post:
+      operationId: MiscController_addMessageLabel
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Add label to a message
+      tags:
+        - Misc
+  /{sessionId}/labels/message/{jid}/{messageId}/{labelId}/remove:
+    post:
+      operationId: MiscController_removeMessageLabel
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Remove label from a message
+      tags:
+        - Misc
+  /{sessionId}/privacy:
+    get:
+      operationId: MiscController_getPrivacy
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get all privacy settings
+      tags:
+        - Misc
+  /{sessionId}/privacy/last-seen:
+    post:
+      operationId: MiscController_updateLastSeen
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update last-seen privacy
+      tags:
+        - Misc
+  /{sessionId}/privacy/online:
+    post:
+      operationId: MiscController_updateOnline
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update online status privacy
+      tags:
+        - Misc
+  /{sessionId}/privacy/profile-picture:
+    post:
+      operationId: MiscController_updateProfilePicture
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update profile picture privacy
+      tags:
+        - Misc
+  /{sessionId}/privacy/status:
+    post:
+      operationId: MiscController_updateStatus
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update status/about privacy
+      tags:
+        - Misc
+  /{sessionId}/privacy/read-receipts:
+    post:
+      operationId: MiscController_updateReadReceipts
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update read receipts privacy
+      tags:
+        - Misc
+  /{sessionId}/privacy/groups:
+    post:
+      operationId: MiscController_updateGroups
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update groups add privacy
+      tags:
+        - Misc
+  /{sessionId}/newsletters:
+    post:
+      operationId: MiscController_createNewsletter
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Create a new newsletter/channel
+      tags:
+        - Misc
+  /{sessionId}/newsletters/{newsletterJid}:
+    get:
+      operationId: MiscController_getNewsletterInfo
+      parameters:
+        - name: newsletterJid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get newsletter metadata
+      tags:
+        - Misc
+    delete:
+      operationId: MiscController_deleteNewsletter
+      parameters:
+        - name: newsletterJid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Delete a newsletter
+      tags:
+        - Misc
+  /{sessionId}/newsletters/{newsletterJid}/subscribers:
+    get:
+      operationId: MiscController_getSubscribers
+      parameters:
+        - name: newsletterJid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get newsletter subscriber count
+      tags:
+        - Misc
+  /{sessionId}/newsletters/{newsletterJid}/messages:
+    get:
+      operationId: MiscController_fetchNewsletterMessages
+      parameters:
+        - name: after
+          required: false
+          in: query
+          schema: {}
+        - name: since
+          required: false
+          in: query
+          schema: {}
+        - name: count
+          required: false
+          in: query
+          schema: {}
+        - name: newsletterJid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Fetch newsletter messages
+      tags:
+        - Misc
+  /{sessionId}/newsletters/follow:
+    post:
+      operationId: MiscController_followNewsletter
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Follow a newsletter/channel
+      tags:
+        - Misc
+  /{sessionId}/newsletters/unfollow:
+    post:
+      operationId: MiscController_unfollowNewsletter
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Unfollow a newsletter/channel
+      tags:
+        - Misc
+  /{sessionId}/newsletters/mute:
+    post:
+      operationId: MiscController_muteNewsletter
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Mute a newsletter/channel
+      tags:
+        - Misc
+  /{sessionId}/newsletters/unmute:
+    post:
+      operationId: MiscController_unmuteNewsletter
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Unmute a newsletter/channel
+      tags:
+        - Misc
+  /{sessionId}/newsletters/send:
+    post:
+      operationId: MiscController_sendNewsletterMessage
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Send a message to a newsletter
+      tags:
+        - Misc
+  /{sessionId}/newsletters/{newsletterJid}/name:
+    post:
+      operationId: MiscController_updateNewsletterName
+      parameters:
+        - name: newsletterJid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update newsletter name
+      tags:
+        - Misc
+  /{sessionId}/newsletters/{newsletterJid}/description:
+    post:
+      operationId: MiscController_updateNewsletterDesc
+      parameters:
+        - name: newsletterJid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Update newsletter description
+      tags:
+        - Misc
+  /{sessionId}/newsletters/{newsletterJid}/react:
+    post:
+      operationId: MiscController_reactNewsletter
+      parameters:
+        - name: newsletterJid
+          required: true
+          in: path
+          schema: {}
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '201':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: React to a newsletter message
+      tags:
+        - Misc
+  /{sessionId}/blocklist:
+    get:
+      operationId: MiscController_getBlocklist
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get blocklist
+      tags:
+        - Misc
+  /{sessionId}/device:
+    get:
+      operationId: MiscController_getDevice
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema: {}
+      responses:
+        '200':
+          description: ''
+      security:
+        - x-api-key: []
+      summary: Get connected device information
+      tags:
+        - Misc
+  /health:
+    get:
+      operationId: HealthController_check
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags:
+        - Health
+info:
+  title: Baileys WhatsApp API
+  description: Comprehensive REST API for WhatsApp using Baileys library.
+  version: 1.0.0
+  contact: {}
+tags: []
+servers: []
+components:
+  securitySchemes:
+    x-api-key:
+      type: apiKey
+      in: header
+      name: x-api-key
+  schemas: {}

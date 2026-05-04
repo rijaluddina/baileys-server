@@ -1,5 +1,5 @@
 import { Job } from 'bullmq';
-import { MessageStoreProcessor } from './message-store.processor';
+import { MessageStoreProcessor } from './message-store.processor.js';
 
 describe('MessageStoreProcessor', () => {
   it('stores valid messages in a single transaction', async () => {
@@ -10,7 +10,7 @@ describe('MessageStoreProcessor', () => {
       },
       $transaction: jest.fn().mockResolvedValue([]),
     };
-    const processor = new MessageStoreProcessor(prisma as never);
+    const processor = new MessageStoreProcessor(prisma as any);
     const job = {
       data: {
         sessionId: 'session-1',

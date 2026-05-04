@@ -1,5 +1,5 @@
 import { Job } from 'bullmq';
-import { ContactSyncProcessor } from './contact-sync.processor';
+import { ContactSyncProcessor } from './contact-sync.processor.js';
 
 describe('ContactSyncProcessor', () => {
   it('syncs valid contacts in a single transaction', async () => {
@@ -10,7 +10,7 @@ describe('ContactSyncProcessor', () => {
       },
       $transaction: jest.fn().mockResolvedValue([]),
     };
-    const processor = new ContactSyncProcessor(prisma as never);
+    const processor = new ContactSyncProcessor(prisma as any);
     const job = {
       data: {
         sessionId: 'session-1',

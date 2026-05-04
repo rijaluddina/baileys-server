@@ -28,7 +28,8 @@ export class ApiKeyGuard implements CanActivate {
 
     if (!configuredKey) return true; // No key configured = open access
     if (!apiKey) throw new UnauthorizedException('API key is required');
-    if (apiKey !== configuredKey) throw new UnauthorizedException('Invalid API key');
+    if (apiKey !== configuredKey)
+      throw new UnauthorizedException('Invalid API key');
 
     return true;
   }

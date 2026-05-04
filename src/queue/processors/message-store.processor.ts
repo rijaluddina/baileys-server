@@ -1,5 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import type { Prisma } from '../../generated/prisma/client/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -33,13 +33,24 @@ function toLong(val: number | Long | undefined): number {
   return val.low;
 }
 
-function getMessageType(message: Record<string, unknown> | undefined): string | null {
+function getMessageType(
+  message: Record<string, unknown> | undefined,
+): string | null {
   if (!message) return null;
   const types = [
-    'conversation', 'imageMessage', 'videoMessage', 'audioMessage',
-    'documentMessage', 'stickerMessage', 'contactMessage',
-    'locationMessage', 'extendedTextMessage', 'pollCreationMessage',
-    'reactionMessage', 'listMessage', 'buttonsMessage',
+    'conversation',
+    'imageMessage',
+    'videoMessage',
+    'audioMessage',
+    'documentMessage',
+    'stickerMessage',
+    'contactMessage',
+    'locationMessage',
+    'extendedTextMessage',
+    'pollCreationMessage',
+    'reactionMessage',
+    'listMessage',
+    'buttonsMessage',
   ];
   return types.find((t) => t in message) ?? null;
 }
@@ -52,7 +63,7 @@ function toInputJson(value: unknown): Prisma.InputJsonValue {
 export class MessageStoreProcessor extends WorkerHost {
   private readonly logger = new Logger(MessageStoreProcessor.name);
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {
     super();
   }
 
@@ -96,10 +107,14 @@ export class MessageStoreProcessor extends WorkerHost {
       try {
         await this.prisma.$transaction(operations);
       } catch (err) {
-        this.logger.warn(`Failed to store messages for session ${sessionId}: ${err}`);
+        this.logger.warn(
+          `Failed to store messages for session ${sessionId}: ${err}`,
+        );
       }
     }
 
-    this.logger.debug(`Stored ${operations.length}/${messages.length} messages for session ${sessionId}`);
+    this.logger.debug(
+      `Stored ${operations.length}/${messages.length} messages for session ${sessionId}`,
+    );
   }
 }

@@ -1,5 +1,5 @@
 import { Job } from 'bullmq';
-import { ChatSyncProcessor } from './chat-sync.processor';
+import { ChatSyncProcessor } from './chat-sync.processor.js';
 
 describe('ChatSyncProcessor', () => {
   it('syncs valid chats in a single transaction', async () => {
@@ -10,7 +10,7 @@ describe('ChatSyncProcessor', () => {
       },
       $transaction: jest.fn().mockResolvedValue([]),
     };
-    const processor = new ChatSyncProcessor(prisma as never);
+    const processor = new ChatSyncProcessor(prisma as any);
     const job = {
       data: {
         sessionId: 'session-1',

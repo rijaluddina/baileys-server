@@ -1,5 +1,20 @@
-import { Controller, Get, Post, Param, Body, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiSecurity, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Query,
+  ParseIntPipe,
+  DefaultValuePipe,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiSecurity,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { ContactService } from './contact.service.js';
 import {
   CheckNumberDto,
@@ -18,9 +33,24 @@ export class ContactController {
   @Get()
   @ApiOperation({ summary: 'Get all contacts (from database)' })
   @ApiParam({ name: 'sessionId' })
-  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name or JID' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Limit (default: 50)' })
-  @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Offset (default: 0)' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search by name or JID',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limit (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: 'Offset (default: 0)',
+  })
   getContacts(
     @Param('sessionId') sessionId: string,
     @Query('search') search?: string,
@@ -33,7 +63,10 @@ export class ContactController {
   @Post('check')
   @ApiOperation({ summary: 'Check if numbers exist on WhatsApp' })
   @ApiParam({ name: 'sessionId' })
-  checkNumber(@Param('sessionId') sessionId: string, @Body() dto: CheckNumberDto) {
+  checkNumber(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: CheckNumberDto,
+  ) {
     return this.contactService.checkNumberExists(sessionId, dto);
   }
 
@@ -47,21 +80,33 @@ export class ContactController {
     @Param('jid') jid: string,
     @Query('highRes') highRes?: string,
   ) {
-    return this.contactService.getProfilePicture(sessionId, jid, highRes === 'true');
+    return this.contactService.getProfilePicture(
+      sessionId,
+      jid,
+      highRes === 'true',
+    );
   }
 
   @Get(':jid/business-profile')
   @ApiOperation({ summary: 'Get business profile' })
   @ApiParam({ name: 'sessionId' })
   @ApiParam({ name: 'jid' })
-  getBusinessProfile(@Param('sessionId') sessionId: string, @Param('jid') jid: string) {
+  getBusinessProfile(
+    @Param('sessionId') sessionId: string,
+    @Param('jid') jid: string,
+  ) {
     return this.contactService.getBusinessProfile(sessionId, jid);
   }
 
   @Post('profile/business-profile')
-  @ApiOperation({ summary: 'Update own business profile (requires business account)' })
+  @ApiOperation({
+    summary: 'Update own business profile (requires business account)',
+  })
   @ApiParam({ name: 'sessionId' })
-  updateBusinessProfile(@Param('sessionId') sessionId: string, @Body() dto: UpdateBusinessProfileDto) {
+  updateBusinessProfile(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: UpdateBusinessProfileDto,
+  ) {
     return this.contactService.updateBusinessProfile(sessionId, dto);
   }
 
@@ -92,21 +137,30 @@ export class ContactController {
   @Post('profile/picture')
   @ApiOperation({ summary: 'Update own profile picture' })
   @ApiParam({ name: 'sessionId' })
-  updateProfilePicture(@Param('sessionId') sessionId: string, @Body() dto: UpdateProfilePictureDto) {
+  updateProfilePicture(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: UpdateProfilePictureDto,
+  ) {
     return this.contactService.updateProfilePicture(sessionId, dto);
   }
 
   @Post('profile/name')
   @ApiOperation({ summary: 'Update own profile name' })
   @ApiParam({ name: 'sessionId' })
-  updateProfileName(@Param('sessionId') sessionId: string, @Body() dto: UpdateProfileNameDto) {
+  updateProfileName(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: UpdateProfileNameDto,
+  ) {
     return this.contactService.updateProfileName(sessionId, dto.name);
   }
 
   @Post('profile/status')
   @ApiOperation({ summary: 'Update own about/status text' })
   @ApiParam({ name: 'sessionId' })
-  updateProfileStatus(@Param('sessionId') sessionId: string, @Body() dto: UpdateProfileStatusDto) {
+  updateProfileStatus(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: UpdateProfileStatusDto,
+  ) {
     return this.contactService.updateProfileStatus(sessionId, dto.status);
   }
 }

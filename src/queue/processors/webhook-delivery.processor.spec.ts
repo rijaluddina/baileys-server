@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Job } from 'bullmq';
-import { WebhookDeliveryProcessor } from './webhook-delivery.processor';
+import { WebhookDeliveryProcessor } from './webhook-delivery.processor.js';
 
 jest.mock('axios');
 
@@ -24,7 +24,10 @@ describe('WebhookDeliveryProcessor', () => {
         create: jest.fn().mockRejectedValue(new Error('db unavailable')),
       },
     };
-    const processor = new WebhookDeliveryProcessor(prisma as any, { get: jest.fn(() => '') } as any);
+    const processor = new WebhookDeliveryProcessor(
+      prisma as any,
+      { get: jest.fn(() => '') } as any,
+    );
 
     await expect(processor.process(job)).resolves.toBeUndefined();
     expect(prisma.webhookLog.create).toHaveBeenCalled();

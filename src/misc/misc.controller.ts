@@ -1,5 +1,19 @@
-import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiSecurity, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiSecurity,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { MiscService } from './misc.service.js';
 import {
   SetPresenceDto,
@@ -17,16 +31,24 @@ export class MiscController {
 
   // === Presence ===
   @Post('presence')
-  @ApiOperation({ summary: 'Set presence (composing, recording, available, etc.)' })
+  @ApiOperation({
+    summary: 'Set presence (composing, recording, available, etc.)',
+  })
   @ApiParam({ name: 'sessionId' })
-  setPresence(@Param('sessionId') sessionId: string, @Body() dto: SetPresenceDto) {
+  setPresence(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SetPresenceDto,
+  ) {
     return this.miscService.setPresence(sessionId, dto);
   }
 
   @Post('presence/subscribe')
   @ApiOperation({ summary: 'Subscribe to presence updates of a contact' })
   @ApiParam({ name: 'sessionId' })
-  subscribePresence(@Param('sessionId') sessionId: string, @Body() dto: SubscribePresenceDto) {
+  subscribePresence(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SubscribePresenceDto,
+  ) {
     return this.miscService.subscribePresence(sessionId, dto.jid);
   }
 
@@ -81,7 +103,12 @@ export class MiscController {
     @Param('messageId') messageId: string,
     @Param('labelId') labelId: string,
   ) {
-    return this.miscService.removeMessageLabel(sessionId, jid, messageId, labelId);
+    return this.miscService.removeMessageLabel(
+      sessionId,
+      jid,
+      messageId,
+      labelId,
+    );
   }
 
   // === Privacy ===
@@ -95,42 +122,60 @@ export class MiscController {
   @Post('privacy/last-seen')
   @ApiOperation({ summary: 'Update last-seen privacy' })
   @ApiParam({ name: 'sessionId' })
-  updateLastSeen(@Param('sessionId') sessionId: string, @Body() body: { value: string }) {
+  updateLastSeen(
+    @Param('sessionId') sessionId: string,
+    @Body() body: { value: string },
+  ) {
     return this.miscService.updateLastSeenPrivacy(sessionId, body.value);
   }
 
   @Post('privacy/online')
   @ApiOperation({ summary: 'Update online status privacy' })
   @ApiParam({ name: 'sessionId' })
-  updateOnline(@Param('sessionId') sessionId: string, @Body() body: { value: string }) {
+  updateOnline(
+    @Param('sessionId') sessionId: string,
+    @Body() body: { value: string },
+  ) {
     return this.miscService.updateOnlinePrivacy(sessionId, body.value);
   }
 
   @Post('privacy/profile-picture')
   @ApiOperation({ summary: 'Update profile picture privacy' })
   @ApiParam({ name: 'sessionId' })
-  updateProfilePicture(@Param('sessionId') sessionId: string, @Body() body: { value: string }) {
+  updateProfilePicture(
+    @Param('sessionId') sessionId: string,
+    @Body() body: { value: string },
+  ) {
     return this.miscService.updateProfilePicturePrivacy(sessionId, body.value);
   }
 
   @Post('privacy/status')
   @ApiOperation({ summary: 'Update status/about privacy' })
   @ApiParam({ name: 'sessionId' })
-  updateStatus(@Param('sessionId') sessionId: string, @Body() body: { value: string }) {
+  updateStatus(
+    @Param('sessionId') sessionId: string,
+    @Body() body: { value: string },
+  ) {
     return this.miscService.updateStatusPrivacy(sessionId, body.value);
   }
 
   @Post('privacy/read-receipts')
   @ApiOperation({ summary: 'Update read receipts privacy' })
   @ApiParam({ name: 'sessionId' })
-  updateReadReceipts(@Param('sessionId') sessionId: string, @Body() body: { value: string }) {
+  updateReadReceipts(
+    @Param('sessionId') sessionId: string,
+    @Body() body: { value: string },
+  ) {
     return this.miscService.updateReadReceiptsPrivacy(sessionId, body.value);
   }
 
   @Post('privacy/groups')
   @ApiOperation({ summary: 'Update groups add privacy' })
   @ApiParam({ name: 'sessionId' })
-  updateGroups(@Param('sessionId') sessionId: string, @Body() body: { value: string }) {
+  updateGroups(
+    @Param('sessionId') sessionId: string,
+    @Body() body: { value: string },
+  ) {
     return this.miscService.updateGroupsAddPrivacy(sessionId, body.value);
   }
 
@@ -138,7 +183,10 @@ export class MiscController {
   @Post('newsletters')
   @ApiOperation({ summary: 'Create a new newsletter/channel' })
   @ApiParam({ name: 'sessionId' })
-  createNewsletter(@Param('sessionId') sessionId: string, @Body() dto: CreateNewsletterDto) {
+  createNewsletter(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: CreateNewsletterDto,
+  ) {
     return this.miscService.createNewsletter(sessionId, dto);
   }
 
@@ -190,35 +238,50 @@ export class MiscController {
   @Post('newsletters/follow')
   @ApiOperation({ summary: 'Follow a newsletter/channel' })
   @ApiParam({ name: 'sessionId' })
-  followNewsletter(@Param('sessionId') sessionId: string, @Body() dto: NewsletterActionDto) {
+  followNewsletter(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: NewsletterActionDto,
+  ) {
     return this.miscService.followNewsletter(sessionId, dto.newsletterJid);
   }
 
   @Post('newsletters/unfollow')
   @ApiOperation({ summary: 'Unfollow a newsletter/channel' })
   @ApiParam({ name: 'sessionId' })
-  unfollowNewsletter(@Param('sessionId') sessionId: string, @Body() dto: NewsletterActionDto) {
+  unfollowNewsletter(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: NewsletterActionDto,
+  ) {
     return this.miscService.unfollowNewsletter(sessionId, dto.newsletterJid);
   }
 
   @Post('newsletters/mute')
   @ApiOperation({ summary: 'Mute a newsletter/channel' })
   @ApiParam({ name: 'sessionId' })
-  muteNewsletter(@Param('sessionId') sessionId: string, @Body() dto: NewsletterActionDto) {
+  muteNewsletter(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: NewsletterActionDto,
+  ) {
     return this.miscService.muteNewsletter(sessionId, dto.newsletterJid);
   }
 
   @Post('newsletters/unmute')
   @ApiOperation({ summary: 'Unmute a newsletter/channel' })
   @ApiParam({ name: 'sessionId' })
-  unmuteNewsletter(@Param('sessionId') sessionId: string, @Body() dto: NewsletterActionDto) {
+  unmuteNewsletter(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: NewsletterActionDto,
+  ) {
     return this.miscService.unmuteNewsletter(sessionId, dto.newsletterJid);
   }
 
   @Post('newsletters/send')
   @ApiOperation({ summary: 'Send a message to a newsletter' })
   @ApiParam({ name: 'sessionId' })
-  sendNewsletterMessage(@Param('sessionId') sessionId: string, @Body() dto: SendNewsletterMessageDto) {
+  sendNewsletterMessage(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SendNewsletterMessageDto,
+  ) {
     return this.miscService.sendNewsletterMessage(sessionId, dto);
   }
 
@@ -231,7 +294,11 @@ export class MiscController {
     @Param('newsletterJid') newsletterJid: string,
     @Body() body: { name: string },
   ) {
-    return this.miscService.updateNewsletterName(sessionId, newsletterJid, body.name);
+    return this.miscService.updateNewsletterName(
+      sessionId,
+      newsletterJid,
+      body.name,
+    );
   }
 
   @Post('newsletters/:newsletterJid/description')
@@ -243,7 +310,11 @@ export class MiscController {
     @Param('newsletterJid') newsletterJid: string,
     @Body() body: { description: string },
   ) {
-    return this.miscService.updateNewsletterDescription(sessionId, newsletterJid, body.description);
+    return this.miscService.updateNewsletterDescription(
+      sessionId,
+      newsletterJid,
+      body.description,
+    );
   }
 
   @Delete('newsletters/:newsletterJid')
@@ -266,7 +337,12 @@ export class MiscController {
     @Param('newsletterJid') newsletterJid: string,
     @Body() body: { serverId: string; reaction?: string },
   ) {
-    return this.miscService.newsletterReactMessage(sessionId, newsletterJid, body.serverId, body.reaction);
+    return this.miscService.newsletterReactMessage(
+      sessionId,
+      newsletterJid,
+      body.serverId,
+      body.reaction,
+    );
   }
 
   // === Blocklist ===

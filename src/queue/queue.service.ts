@@ -65,7 +65,13 @@ export class QueueService {
   ) {
     await this.webhookDeliveryQueue.add(
       'deliver-webhook',
-      { sessionId, webhookUrl, event, data, timestamp: new Date().toISOString() },
+      {
+        sessionId,
+        webhookUrl,
+        event,
+        data,
+        timestamp: new Date().toISOString(),
+      },
       {
         attempts: 5,
         backoff: { type: 'exponential', delay: 2000 },

@@ -1,5 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Job } from 'bullmq';
 import axios from 'axios';
@@ -13,10 +13,10 @@ interface WebhookJob {
   webhookUrl: string;
   event: string;
   data: unknown;
-  timestamp: string;
+  timestamp: number;
 }
 
-function toInputJson(value: unknown): Prisma.InputJsonValue {
+function toInputJson(value: any): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
@@ -30,11 +30,11 @@ export class WebhookDeliveryProcessor extends WorkerHost {
   private readonly secret: string;
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ConfigService) private readonly configService: ConfigService,
   ) {
     super();
-    this.secret = this.configService.get<string>('WEBHOOK_SECRET') || '';
+    this.secret = this.configService?.get<string>('WEBHOOK_SECRET') || '';
   }
 
   async process(job: Job<WebhookJob>): Promise<void> {
@@ -80,11 +80,17 @@ export class WebhookDeliveryProcessor extends WorkerHost {
         },
       });
 
-      this.logger.debug(`Webhook delivered: ${event} → ${webhookUrl} (${response.status})`);
+      this.logger.debug(
+        `Webhook delivered: ${event} → ${webhookUrl} (${response.status})`,
+      );
     } catch (error: unknown) {
-      const statusCode = axios.isAxiosError(error) ? (error.response?.status ?? null) : null;
+      const statusCode = axios.isAxiosError(error)
+        ? (error.response?.status ?? null)
+        : null;
       const errorMessage = getErrorMessage(error);
-      const responseData = axios.isAxiosError(error) ? error.response?.data : undefined;
+      const responseData = axios.isAxiosError(error)
+        ? error.response?.data
+        : undefined;
 
       await this.createWebhookLog({
         data: {
@@ -111,11 +117,15 @@ export class WebhookDeliveryProcessor extends WorkerHost {
     }
   }
 
-  private async createWebhookLog(args: Parameters<PrismaService['webhookLog']['create']>[0]) {
+  private async createWebhookLog(
+    args: Parameters<PrismaService['webhookLog']['create']>[0],
+  ) {
     try {
       await this.prisma.webhookLog.create(args);
     } catch (error: unknown) {
-      this.logger.error(`Failed to write webhook log: ${getErrorMessage(error)}`);
+      this.logger.error(
+        `Failed to write webhook log: ${getErrorMessage(error)}`,
+      );
     }
   }
 }

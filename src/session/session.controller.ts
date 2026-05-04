@@ -9,7 +9,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiSecurity, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiSecurity,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { SessionService } from './session.service.js';
 import { CreateSessionDto } from './dto/session.dto.js';
 
@@ -70,8 +76,18 @@ export class SessionController {
   @ApiOperation({ summary: 'Get message history for a chat (from database)' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
   @ApiParam({ name: 'jid', description: 'Chat JID' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of messages (default: 25)' })
-  @ApiQuery({ name: 'cursor', required: false, type: String, description: 'Cursor for pagination' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of messages (default: 25)',
+  })
+  @ApiQuery({
+    name: 'cursor',
+    required: false,
+    type: String,
+    description: 'Cursor for pagination',
+  })
   async getMessages(
     @Param('sessionId') sessionId: string,
     @Param('jid') jid: string,
@@ -84,23 +100,53 @@ export class SessionController {
   @Get(':sessionId/contacts')
   @ApiOperation({ summary: 'Get stored contacts (from database)' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
-  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name or JID' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Limit (default: 50)' })
-  @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Offset (default: 0)' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search by name or JID',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limit (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: 'Offset (default: 0)',
+  })
   async getContacts(
     @Param('sessionId') sessionId: string,
     @Query('search') search?: string,
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
   ) {
-    return this.sessionService.getContacts(sessionId, search, limit || 50, offset || 0);
+    return this.sessionService.getContacts(
+      sessionId,
+      search,
+      limit || 50,
+      offset || 0,
+    );
   }
 
   @Get(':sessionId/chats')
   @ApiOperation({ summary: 'Get stored chats (from database)' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Limit (default: 50)' })
-  @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Offset (default: 0)' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limit (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: 'Offset (default: 0)',
+  })
   async getChats(
     @Param('sessionId') sessionId: string,
     @Query('limit') limit?: number,
@@ -112,13 +158,27 @@ export class SessionController {
   @Get(':sessionId/webhooks/logs')
   @ApiOperation({ summary: 'Get webhook delivery logs (from database)' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Limit (default: 50)' })
-  @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Offset (default: 0)' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limit (default: 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: 'Offset (default: 0)',
+  })
   async getWebhookLogs(
     @Param('sessionId') sessionId: string,
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
   ) {
-    return this.sessionService.getWebhookLogs(sessionId, limit || 50, offset || 0);
+    return this.sessionService.getWebhookLogs(
+      sessionId,
+      limit || 50,
+      offset || 0,
+    );
   }
 }

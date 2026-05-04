@@ -47,7 +47,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     private readonly eventEmitter: EventEmitter2,
     private readonly prisma: PrismaService,
     private readonly queueService: QueueService,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     // Schedule the daily message cleanup
@@ -67,10 +67,12 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
         // Socket may already be closed
       }
       // Update DB status to 'close' for graceful shutdown
-      await this.prisma.session.update({
-        where: { id },
-        data: { status: 'close' },
-      }).catch(() => { });
+      await this.prisma.session
+        .update({
+          where: { id },
+          data: { status: 'close' },
+        })
+        .catch(() => {});
     }
     this.sessions.clear();
   }
@@ -88,7 +90,9 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.logger.log(`Auto-reconnecting ${sessionsToReconnect.length} session(s)...`);
+    this.logger.log(
+      `Auto-reconnecting ${sessionsToReconnect.length} session(s)...`,
+    );
 
     for (const dbSession of sessionsToReconnect) {
       try {
@@ -97,25 +101,32 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
         });
         this.logger.log(`Auto-reconnected session "${dbSession.id}"`);
       } catch (err) {
-        this.logger.error(`Failed to auto-reconnect session "${dbSession.id}": ${err}`);
-        await this.prisma.session.update({
-          where: { id: dbSession.id },
-          data: { status: 'close' },
-        }).catch(() => { });
+        this.logger.error(
+          `Failed to auto-reconnect session "${dbSession.id}": ${err}`,
+        );
+        await this.prisma.session
+          .update({
+            where: { id: dbSession.id },
+            data: { status: 'close' },
+          })
+          .catch(() => {});
       }
     }
   }
 
   getSocket(sessionId: string): WASocket {
     const session = this.sessions.get(sessionId);
-    if (!session) throw new NotFoundException(`Session "${sessionId}" not found`);
-    if (session.status !== 'open') throw new BadRequestException(`Session "${sessionId}" is not connected`);
+    if (!session)
+      throw new NotFoundException(`Session "${sessionId}" not found`);
+    if (session.status !== 'open')
+      throw new BadRequestException(`Session "${sessionId}" is not connected`);
     return session.socket;
   }
 
   getSessionData(sessionId: string): SessionData {
     const session = this.sessions.get(sessionId);
-    if (!session) throw new NotFoundException(`Session "${sessionId}" not found`);
+    if (!session)
+      throw new NotFoundException(`Session "${sessionId}" not found`);
     return session;
   }
 
@@ -125,7 +136,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
   async createSession(
     sessionId: string,
-    options: { webhookUrl?: string; pairingCode?: boolean; phoneNumber?: string } = {},
+    options: {
+      webhookUrl?: string;
+      pairingCode?: boolean;
+      phoneNumber?: string;
+    } = {},
   ) {
     this.clearReconnectTimer(sessionId);
 
@@ -139,23 +154,32 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       create: {
         id: sessionId,
         status: 'connecting',
-        webhookUrl: options.webhookUrl || this.configService.get<string>('WEBHOOK_URL') || null,
+        webhookUrl:
+          options.webhookUrl ||
+          this.configService.get<string>('WEBHOOK_URL') ||
+          null,
       },
       update: {
         status: 'connecting',
-        webhookUrl: options.webhookUrl || this.configService.get<string>('WEBHOOK_URL') || null,
+        webhookUrl:
+          options.webhookUrl ||
+          this.configService.get<string>('WEBHOOK_URL') ||
+          null,
       },
     });
 
     // Use Prisma-backed auth state instead of filesystem
-    const { state, saveCreds } = await usePrismaAuthState(sessionId, this.prisma);
+    const { state, saveCreds } = await usePrismaAuthState(
+      sessionId,
+      this.prisma,
+    );
     const { version } = await fetchLatestBaileysVersion();
 
     const socket = makeWASocket({
       version,
       auth: state,
       printQRInTerminal: false,
-      logger: pino({ level: 'silent' }) as any,
+      logger: pino({ level: 'silent' }),
       browser: Browsers.ubuntu('Baileys Server'),
       generateHighQualityLinkPreview: true,
       markOnlineOnConnect: true,
@@ -164,7 +188,8 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     const sessionData: SessionData = {
       socket,
       status: 'connecting',
-      webhookUrl: options.webhookUrl || this.configService.get<string>('WEBHOOK_URL'),
+      webhookUrl:
+        options.webhookUrl || this.configService.get<string>('WEBHOOK_URL'),
       retryCount: 0,
       saveCreds,
     };
@@ -176,103 +201,134 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       try {
         const code = await socket.requestPairingCode(options.phoneNumber);
         sessionData.pairingCode = code;
-        this.eventEmitter.emit('session.pairing-code', { sessionId, pairingCode: code });
+        this.eventEmitter.emit('session.pairing-code', {
+          sessionId,
+          pairingCode: code,
+        });
         this.logger.log(`Pairing code generated for "${sessionId}": ${code}`);
       } catch (err) {
-        this.logger.error(`Failed to request pairing code for ${sessionId}: ${err}`);
+        this.logger.error(
+          `Failed to request pairing code for ${sessionId}: ${err}`,
+        );
         // If pairing code request fails, it's often due to socket closing or rate limit
-        throw new BadRequestException(`Failed to request pairing code: ${err.message}`);
+        throw new BadRequestException(
+          `Failed to request pairing code: ${err.message}`,
+        );
       }
     }
 
     // Connection update handler
-    socket.ev.on('connection.update', async (update: Partial<ConnectionState>) => {
-      const { connection, lastDisconnect, qr } = update;
+    socket.ev.on(
+      'connection.update',
+      async (update: Partial<ConnectionState>) => {
+        const { connection, lastDisconnect, qr } = update;
 
-      if (qr && !options.pairingCode) {
-        const qrBase64 = await QRCode.toDataURL(qr);
-        sessionData.qr = qrBase64;
-        sessionData.status = 'connecting';
-        this.eventEmitter.emit('session.qr', { sessionId, qr: qrBase64 });
-        this.emitWebhook(sessionId, 'qr', { qr: qrBase64 });
-      }
-
-      if (connection === 'open') {
-        sessionData.status = 'open';
-        sessionData.qr = undefined;
-        sessionData.retryCount = 0;
-        sessionData.user = socket.user ? { ...socket.user } : undefined;
-        this.logger.log(`Session "${sessionId}" connected as ${socket.user?.id}`);
-
-        // Persist to DB
-        await this.prisma.session.update({
-          where: { id: sessionId },
-          data: {
-            status: 'open',
-            userJid: socket.user?.id ?? null,
-            userName: (socket.user as any)?.name ?? null,
-            retryCount: 0,
-          },
-        }).catch((err) => this.logger.error(`DB update failed for ${sessionId}: ${err}`));
-
-        this.eventEmitter.emit('session.connected', { sessionId, user: socket.user });
-        this.emitWebhook(sessionId, 'connection', { status: 'open', user: socket.user });
-      }
-
-      if (connection === 'close') {
-        sessionData.status = 'close';
-        const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
-        const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-
-        this.logger.warn(
-          `Session "${sessionId}" disconnected (code: ${statusCode}), reconnect: ${shouldReconnect}`,
-        );
-
-        this.emitWebhook(sessionId, 'connection', {
-          status: 'close',
-          reason: statusCode,
-          shouldReconnect,
-        });
-
-        if (shouldReconnect && sessionData.retryCount < 5) {
-          sessionData.retryCount++;
-
-          await this.prisma.session.update({
-            where: { id: sessionId },
-            data: {
-              status: 'close',
-              retryCount: sessionData.retryCount,
-            },
-          }).catch(() => { });
-
-          const delay = Math.min(1000 * Math.pow(2, sessionData.retryCount), 30000);
-          this.logger.log(`Reconnecting "${sessionId}" in ${delay}ms (attempt ${sessionData.retryCount})`);
-
-          this.clearReconnectTimer(sessionId);
-          const timer = setTimeout(() => {
-            this.reconnectTimers.delete(sessionId);
-            if (!this.sessions.has(sessionId)) return;
-            this.sessions.delete(sessionId);
-            this.createSession(sessionId, options).catch((err) => {
-              this.logger.error(`Failed to reconnect "${sessionId}": ${err}`);
-            });
-          }, delay);
-          this.reconnectTimers.set(sessionId, timer);
-        } else if (!shouldReconnect) {
-          this.logger.log(`Session "${sessionId}" logged out, cleaning up`);
-          this.clearReconnectTimer(sessionId);
-          this.sessions.delete(sessionId);
-
-          // Clean up DB — cascade delete auth credentials
-          await this.prisma.session.delete({
-            where: { id: sessionId },
-          }).catch(() => { });
-
-          this.eventEmitter.emit('session.logged-out', { sessionId });
-          this.emitWebhook(sessionId, 'connection', { status: 'logged-out' });
+        if (qr && !options.pairingCode) {
+          const qrBase64 = await QRCode.toDataURL(qr);
+          sessionData.qr = qrBase64;
+          sessionData.status = 'connecting';
+          this.eventEmitter.emit('session.qr', { sessionId, qr: qrBase64 });
+          this.emitWebhook(sessionId, 'qr', { qr: qrBase64 });
         }
-      }
-    });
+
+        if (connection === 'open') {
+          sessionData.status = 'open';
+          sessionData.qr = undefined;
+          sessionData.retryCount = 0;
+          sessionData.user = socket.user ? { ...socket.user } : undefined;
+          this.logger.log(
+            `Session "${sessionId}" connected as ${socket.user?.id}`,
+          );
+
+          // Persist to DB
+          await this.prisma.session
+            .update({
+              where: { id: sessionId },
+              data: {
+                status: 'open',
+                userJid: socket.user?.id ?? null,
+                userName: (socket.user as any)?.name ?? null,
+                retryCount: 0,
+              },
+            })
+            .catch((err) =>
+              this.logger.error(`DB update failed for ${sessionId}: ${err}`),
+            );
+
+          this.eventEmitter.emit('session.connected', {
+            sessionId,
+            user: socket.user,
+          });
+          this.emitWebhook(sessionId, 'connection', {
+            status: 'open',
+            user: socket.user,
+          });
+        }
+
+        if (connection === 'close') {
+          sessionData.status = 'close';
+          const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
+          const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+
+          this.logger.warn(
+            `Session "${sessionId}" disconnected (code: ${statusCode}), reconnect: ${shouldReconnect}`,
+          );
+
+          this.emitWebhook(sessionId, 'connection', {
+            status: 'close',
+            reason: statusCode,
+            shouldReconnect,
+          });
+
+          if (shouldReconnect && sessionData.retryCount < 5) {
+            sessionData.retryCount++;
+
+            await this.prisma.session
+              .update({
+                where: { id: sessionId },
+                data: {
+                  status: 'close',
+                  retryCount: sessionData.retryCount,
+                },
+              })
+              .catch(() => {});
+
+            const delay = Math.min(
+              1000 * Math.pow(2, sessionData.retryCount),
+              30000,
+            );
+            this.logger.log(
+              `Reconnecting "${sessionId}" in ${delay}ms (attempt ${sessionData.retryCount})`,
+            );
+
+            this.clearReconnectTimer(sessionId);
+            const timer = setTimeout(() => {
+              this.reconnectTimers.delete(sessionId);
+              if (!this.sessions.has(sessionId)) return;
+              this.sessions.delete(sessionId);
+              this.createSession(sessionId, options).catch((err) => {
+                this.logger.error(`Failed to reconnect "${sessionId}": ${err}`);
+              });
+            }, delay);
+            this.reconnectTimers.set(sessionId, timer);
+          } else if (!shouldReconnect) {
+            this.logger.log(`Session "${sessionId}" logged out, cleaning up`);
+            this.clearReconnectTimer(sessionId);
+            this.sessions.delete(sessionId);
+
+            // Clean up DB — cascade delete auth credentials
+            await this.prisma.session
+              .delete({
+                where: { id: sessionId },
+              })
+              .catch(() => {});
+
+            this.eventEmitter.emit('session.logged-out', { sessionId });
+            this.emitWebhook(sessionId, 'connection', { status: 'logged-out' });
+          }
+        }
+      },
+    );
 
     // Save credentials on update (to DB via Prisma)
     socket.ev.on('creds.update', saveCreds);
@@ -280,23 +336,35 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     // Store incoming messages via BullMQ queue
     socket.ev.on('messages.upsert', (m: BaileysEventMap['messages.upsert']) => {
       if (m.messages.length > 0) {
-        this.queueService.addMessageStoreJob(sessionId, m.messages as any).catch((err) => {
-          this.logger.error(`Failed to queue messages for ${sessionId}: ${err}`);
-        });
+        this.queueService
+          .addMessageStoreJob(sessionId, m.messages as any)
+          .catch((err) => {
+            this.logger.error(
+              `Failed to queue messages for ${sessionId}: ${err}`,
+            );
+          });
       }
     });
 
     // Sync contacts via BullMQ queue
     socket.ev.on('contacts.upsert', (contacts) => {
-      this.queueService.addContactSyncJob(sessionId, contacts as any).catch((err) => {
-        this.logger.error(`Failed to queue contacts for ${sessionId}: ${err}`);
-      });
+      this.queueService
+        .addContactSyncJob(sessionId, contacts as any)
+        .catch((err) => {
+          this.logger.error(
+            `Failed to queue contacts for ${sessionId}: ${err}`,
+          );
+        });
     });
 
     socket.ev.on('contacts.update', (contacts) => {
-      this.queueService.addContactSyncJob(sessionId, contacts as any).catch((err) => {
-        this.logger.error(`Failed to queue contacts update for ${sessionId}: ${err}`);
-      });
+      this.queueService
+        .addContactSyncJob(sessionId, contacts as any)
+        .catch((err) => {
+          this.logger.error(
+            `Failed to queue contacts update for ${sessionId}: ${err}`,
+          );
+        });
     });
 
     // Sync chats via BullMQ queue
@@ -308,7 +376,9 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     socket.ev.on('chats.update', (chats) => {
       this.queueService.addChatSyncJob(sessionId, chats as any).catch((err) => {
-        this.logger.error(`Failed to queue chats update for ${sessionId}: ${err}`);
+        this.logger.error(
+          `Failed to queue chats update for ${sessionId}: ${err}`,
+        );
       });
     });
 
@@ -328,8 +398,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     const session = this.sessions.get(sessionId);
     if (!session) {
       // Check if session exists in DB
-      const dbSession = await this.prisma.session.findUnique({ where: { id: sessionId } });
-      if (!dbSession) throw new NotFoundException(`Session "${sessionId}" not found`);
+      const dbSession = await this.prisma.session.findUnique({
+        where: { id: sessionId },
+      });
+      if (!dbSession)
+        throw new NotFoundException(`Session "${sessionId}" not found`);
     }
 
     if (session) {
@@ -342,9 +415,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Delete from DB (cascades to auth_credentials, messages, contacts, chats, webhook_logs)
-    await this.prisma.session.delete({
-      where: { id: sessionId },
-    }).catch(() => { });
+    await this.prisma.session
+      .delete({
+        where: { id: sessionId },
+      })
+      .catch(() => {});
 
     this.logger.log(`Session "${sessionId}" deleted`);
     return { sessionId, status: 'deleted' };
@@ -353,7 +428,8 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
   async logoutSession(sessionId: string) {
     this.clearReconnectTimer(sessionId);
     const session = this.sessions.get(sessionId);
-    if (!session) throw new NotFoundException(`Session "${sessionId}" not found`);
+    if (!session)
+      throw new NotFoundException(`Session "${sessionId}" not found`);
 
     try {
       await session.socket.logout();
@@ -364,9 +440,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     this.sessions.delete(sessionId);
 
     // Delete from DB
-    await this.prisma.session.delete({
-      where: { id: sessionId },
-    }).catch(() => { });
+    await this.prisma.session
+      .delete({
+        where: { id: sessionId },
+      })
+      .catch(() => {});
 
     return { sessionId, status: 'logged-out' };
   }
@@ -403,13 +481,18 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Fall back to DB
-    const dbSession = await this.prisma.session.findUnique({ where: { id: sessionId } });
-    if (!dbSession) throw new NotFoundException(`Session "${sessionId}" not found`);
+    const dbSession = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+    if (!dbSession)
+      throw new NotFoundException(`Session "${sessionId}" not found`);
 
     return {
       sessionId: dbSession.id,
       status: dbSession.status,
-      user: dbSession.userJid ? { id: dbSession.userJid, name: dbSession.userName } : null,
+      user: dbSession.userJid
+        ? { id: dbSession.userJid, name: dbSession.userName }
+        : null,
     };
   }
 
@@ -433,9 +516,17 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
   /**
    * Get messages from DB with pagination.
    */
-  async getMessages(sessionId: string, jid: string, limit = 25, cursor?: string) {
-    const dbSession = await this.prisma.session.findUnique({ where: { id: sessionId } });
-    if (!dbSession) throw new NotFoundException(`Session "${sessionId}" not found`);
+  async getMessages(
+    sessionId: string,
+    jid: string,
+    limit = 25,
+    cursor?: string,
+  ) {
+    const dbSession = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+    if (!dbSession)
+      throw new NotFoundException(`Session "${sessionId}" not found`);
 
     const where: Prisma.MessageWhereInput = { sessionId, remoteJid: jid };
     if (cursor) {
@@ -450,16 +541,25 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     return {
       messages,
-      nextCursor: messages.length === limit ? messages[messages.length - 1].id : null,
+      nextCursor:
+        messages.length === limit ? messages[messages.length - 1].id : null,
     };
   }
 
   /**
    * Get paginated contacts from DB.
    */
-  async getContacts(sessionId: string, search?: string, limit = 50, offset = 0) {
-    const dbSession = await this.prisma.session.findUnique({ where: { id: sessionId } });
-    if (!dbSession) throw new NotFoundException(`Session "${sessionId}" not found`);
+  async getContacts(
+    sessionId: string,
+    search?: string,
+    limit = 50,
+    offset = 0,
+  ) {
+    const dbSession = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+    if (!dbSession)
+      throw new NotFoundException(`Session "${sessionId}" not found`);
 
     const where: Prisma.ContactWhereInput = { sessionId };
     if (search) {
@@ -487,8 +587,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
    * Get paginated chats from DB.
    */
   async getChats(sessionId: string, limit = 50, offset = 0) {
-    const dbSession = await this.prisma.session.findUnique({ where: { id: sessionId } });
-    if (!dbSession) throw new NotFoundException(`Session "${sessionId}" not found`);
+    const dbSession = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+    if (!dbSession)
+      throw new NotFoundException(`Session "${sessionId}" not found`);
 
     const [chats, total] = await Promise.all([
       this.prisma.chat.findMany({
@@ -503,7 +606,9 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     // Serialize BigInt
     const serializedChats = chats.map((c) => ({
       ...c,
-      conversationTimestamp: c.conversationTimestamp ? Number(c.conversationTimestamp) : null,
+      conversationTimestamp: c.conversationTimestamp
+        ? Number(c.conversationTimestamp)
+        : null,
     }));
 
     return { chats: serializedChats, total, limit, offset };
@@ -513,8 +618,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
    * Get webhook delivery logs from DB.
    */
   async getWebhookLogs(sessionId: string, limit = 50, offset = 0) {
-    const dbSession = await this.prisma.session.findUnique({ where: { id: sessionId } });
-    if (!dbSession) throw new NotFoundException(`Session "${sessionId}" not found`);
+    const dbSession = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+    if (!dbSession)
+      throw new NotFoundException(`Session "${sessionId}" not found`);
 
     const [logs, total] = await Promise.all([
       this.prisma.webhookLog.findMany({
@@ -529,7 +637,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     return { logs, total, limit, offset };
   }
 
-  async findMessage(sessionId: string, jid: string, messageId: string): Promise<WAMessage | undefined> {
+  async findMessage(
+    sessionId: string,
+    jid: string,
+    messageId: string,
+  ): Promise<WAMessage | undefined> {
     const storedMessage = await this.prisma.message.findFirst({
       where: { sessionId, remoteJid: jid, messageId },
     });
@@ -570,9 +682,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     const webhookUrl = session?.webhookUrl;
     if (webhookUrl) {
       // Use BullMQ queue for async delivery with retry
-      this.queueService.addWebhookDeliveryJob(sessionId, webhookUrl, event, data).catch((err) => {
-        this.logger.error(`Failed to queue webhook for ${sessionId}: ${err}`);
-      });
+      this.queueService
+        .addWebhookDeliveryJob(sessionId, webhookUrl, event, data)
+        .catch((err) => {
+          this.logger.error(`Failed to queue webhook for ${sessionId}: ${err}`);
+        });
     }
   }
 

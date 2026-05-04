@@ -46,4 +46,4 @@ import { QUEUE_NAMES } from './queue.constants.js';
   ],
   exports: [QueueService, BullModule],
 })
-export class QueueModule { }
+export class QueueModule {}

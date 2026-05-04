@@ -1,5 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { QUEUE_NAMES } from '../queue.constants.js';
@@ -19,7 +19,7 @@ interface ContactJob {
 export class ContactSyncProcessor extends WorkerHost {
   private readonly logger = new Logger(ContactSyncProcessor.name);
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {
     super();
   }
 
@@ -57,10 +57,14 @@ export class ContactSyncProcessor extends WorkerHost {
       try {
         await this.prisma.$transaction(operations);
       } catch (err) {
-        this.logger.warn(`Failed to sync contacts for session ${sessionId}: ${err}`);
+        this.logger.warn(
+          `Failed to sync contacts for session ${sessionId}: ${err}`,
+        );
       }
     }
 
-    this.logger.debug(`Synced ${operations.length}/${contacts.length} contacts for session ${sessionId}`);
+    this.logger.debug(
+      `Synced ${operations.length}/${contacts.length} contacts for session ${sessionId}`,
+    );
   }
 }
