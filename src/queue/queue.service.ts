@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from './queue.constants.js';
@@ -12,7 +12,7 @@ interface WebhookJobData {
 }
 
 @Injectable()
-export class QueueService {
+export class QueueService implements OnModuleDestroy {
   private readonly logger = new Logger(QueueService.name);
 
   constructor(
@@ -34,6 +34,19 @@ export class QueueService {
     @InjectQueue(QUEUE_NAMES.MESSAGE_CLEANUP)
     private readonly messageCleanupQueue: Queue,
   ) {}
+
+  async onModuleDestroy() {
+    this.logger.log('Closing all BullMQ queues...');
+    await Promise.all([
+      this.messageStoreQueue.close(),
+      this.contactSyncQueue.close(),
+      this.chatSyncQueue.close(),
+      this.historySyncQueue.close(),
+      this.webhookDeliveryQueue.close(),
+      this.messageCleanupQueue.close(),
+    ]);
+    this.logger.log('All BullMQ queues closed.');
+  }
 
   async addMessageStoreJob(sessionId: string, messages: unknown[]) {
     await this.messageStoreQueue.add(
