@@ -3,6 +3,14 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QUEUE_NAMES } from './queue.constants.js';
 
+interface WebhookJobData {
+  sessionId: string;
+  webhookUrl: string;
+  event: string;
+  data: unknown;
+  timestamp: string;
+}
+
 @Injectable()
 export class QueueService {
   private readonly logger = new Logger(QueueService.name);
@@ -17,8 +25,11 @@ export class QueueService {
     @InjectQueue(QUEUE_NAMES.CHAT_SYNC)
     private readonly chatSyncQueue: Queue,
 
+    @InjectQueue(QUEUE_NAMES.HISTORY_SYNC)
+    private readonly historySyncQueue: Queue,
+
     @InjectQueue(QUEUE_NAMES.WEBHOOK_DELIVERY)
-    private readonly webhookDeliveryQueue: Queue,
+    private readonly webhookDeliveryQueue: Queue<WebhookJobData>,
 
     @InjectQueue(QUEUE_NAMES.MESSAGE_CLEANUP)
     private readonly messageCleanupQueue: Queue,
@@ -57,6 +68,17 @@ export class QueueService {
     );
   }
 
+  async addHistorySyncJob(sessionId: string, data: unknown) {
+    await this.historySyncQueue.add(
+      'sync-history',
+      { sessionId, data },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1000 },
+      },
+    );
+  }
+
   async addWebhookDeliveryJob(
     sessionId: string,
     webhookUrl: string,
@@ -74,9 +96,42 @@ export class QueueService {
       },
       {
         attempts: 5,
-        backoff: { type: 'exponential', delay: 2000 },
+        backoff: { type: 'exponential', delay: 1000 },
       },
     );
+  }
+
+  async getFailedWebhookJobs() {
+    const jobs = await this.webhookDeliveryQueue.getFailed();
+    return jobs.map((job) => {
+      const data = job.data;
+      return {
+        id: job.id,
+        sessionId: data.sessionId,
+        event: data.event,
+        webhookUrl: data.webhookUrl,
+        failedReason: job.failedReason,
+        timestamp: data.timestamp,
+        attemptsMade: job.attemptsMade,
+      };
+    });
+  }
+
+  async replayWebhookJob(jobId: string) {
+    const job = await this.webhookDeliveryQueue.getJob(jobId);
+    if (job) {
+      await job.retry();
+      return true;
+    }
+    return false;
+  }
+
+  async replayAllFailedWebhookJobs() {
+    const failedJobs = await this.webhookDeliveryQueue.getFailed();
+    for (const job of failedJobs) {
+      await job.retry();
+    }
+    return failedJobs.length;
   }
 
   async scheduleMessageCleanup() {

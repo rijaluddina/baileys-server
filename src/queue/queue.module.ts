@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MessageStoreProcessor } from './processors/message-store.processor.js';
 import { ContactSyncProcessor } from './processors/contact-sync.processor.js';
 import { ChatSyncProcessor } from './processors/chat-sync.processor.js';
+import { HistorySyncProcessor } from './processors/history-sync.processor.js';
 import { WebhookDeliveryProcessor } from './processors/webhook-delivery.processor.js';
 import { MessageCleanupProcessor } from './processors/message-cleanup.processor.js';
 import { QueueService } from './queue.service.js';
@@ -32,6 +33,7 @@ import { QUEUE_NAMES } from './queue.constants.js';
       { name: QUEUE_NAMES.MESSAGE_STORE },
       { name: QUEUE_NAMES.CONTACT_SYNC },
       { name: QUEUE_NAMES.CHAT_SYNC },
+      { name: QUEUE_NAMES.HISTORY_SYNC },
       { name: QUEUE_NAMES.WEBHOOK_DELIVERY },
       { name: QUEUE_NAMES.MESSAGE_CLEANUP },
     ),
@@ -41,6 +43,7 @@ import { QUEUE_NAMES } from './queue.constants.js';
     MessageStoreProcessor,
     ContactSyncProcessor,
     ChatSyncProcessor,
+    HistorySyncProcessor,
     WebhookDeliveryProcessor,
     MessageCleanupProcessor,
   ],

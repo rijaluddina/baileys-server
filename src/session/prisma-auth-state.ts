@@ -1,3 +1,4 @@
+import type { Logger } from '@nestjs/common';
 import type {
   AuthenticationCreds,
   AuthenticationState,
@@ -19,6 +20,7 @@ function buildKey(type: string, id: string): string {
 export async function usePrismaAuthState(
   sessionId: string,
   prisma: PrismaService,
+  logger?: Logger,
 ): Promise<{ state: AuthenticationState; saveCreds: () => Promise<void> }> {
   // Load or initialize credentials
   const credsRow = await prisma.authCredential.findUnique({
@@ -36,12 +38,19 @@ export async function usePrismaAuthState(
   }
 
   const saveCreds = async () => {
-    const value = JSON.stringify(creds, BufferJSON.replacer);
-    await prisma.authCredential.upsert({
-      where: { sessionId_key: { sessionId, key: 'creds' } },
-      create: { sessionId, key: 'creds', value },
-      update: { value },
-    });
+    try {
+      const value = JSON.stringify(creds, BufferJSON.replacer);
+      await prisma.authCredential.upsert({
+        where: { sessionId_key: { sessionId, key: 'creds' } },
+        create: { sessionId, key: 'creds', value },
+        update: { value },
+      });
+    } catch (err) {
+      logger?.error(
+        `Failed to save credentials for session "${sessionId}": ${err}`,
+      );
+      throw err; // Re-throw to let the caller handle it (e.g. disconnect socket)
+    }
   };
 
   const state: AuthenticationState = {
@@ -83,7 +92,7 @@ export async function usePrismaAuthState(
       },
 
       set: async (data: SignalDataSet): Promise<void> => {
-        const operations: unknown[] = [];
+        const operations: any[] = [];
 
         for (const _type in data) {
           const type = _type as keyof SignalDataTypeMap;
@@ -115,8 +124,14 @@ export async function usePrismaAuthState(
         }
 
         if (operations.length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-          await prisma.$transaction(operations as any);
+          try {
+            await prisma.$transaction(operations);
+          } catch (err) {
+            logger?.error(
+              `Failed to save keys for session "${sessionId}": ${err}`,
+            );
+            // Don't re-throw, let the socket continue if possible
+          }
         }
       },
     },

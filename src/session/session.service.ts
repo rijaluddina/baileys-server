@@ -32,6 +32,7 @@ interface SessionData {
   user?: Record<string, unknown>;
   retryCount: number;
   saveCreds: () => Promise<void>;
+  seenMessages: Set<string>;
 }
 
 @Injectable()
@@ -170,6 +171,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     const { state, saveCreds } = await usePrismaAuthState(
       sessionId,
       this.prisma,
+      this.logger,
     );
     const { version } = await fetchLatestBaileysVersion();
 
@@ -190,6 +192,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
         options.webhookUrl || this.configService.get<string>('WEBHOOK_URL'),
       retryCount: 0,
       saveCreds,
+      seenMessages: new Set<string>(),
     };
 
     this.sessions.set(sessionId, sessionData);
@@ -266,6 +269,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
         if (connection === 'close') {
           sessionData.status = 'close';
+          sessionData.seenMessages.clear();
           const disconnectError = lastDisconnect?.error as
             | { output?: { statusCode?: number } }
             | undefined;
@@ -336,20 +340,50 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     // Save credentials on update (to DB via Prisma)
     socket.ev.on('creds.update', () => {
-      void saveCreds();
+      void saveCreds().catch((err: unknown) => {
+        this.logger.error(
+          `Critical: Failed to save credentials for ${sessionId}: ${String(err)}`,
+        );
+      });
     });
 
     // Store incoming messages via BullMQ queue
     socket.ev.on('messages.upsert', (m: BaileysEventMap['messages.upsert']) => {
-      if (m.messages.length > 0) {
+      const newMessages = m.messages.filter((msg) => {
+        if (!msg.key?.id) return false;
+        if (sessionData.seenMessages.has(msg.key.id)) return false;
+        sessionData.seenMessages.add(msg.key.id);
+        return true;
+      });
+
+      if (newMessages.length > 0) {
         void this.queueService
-          .addMessageStoreJob(sessionId, m.messages as unknown[])
+          .addMessageStoreJob(sessionId, newMessages as unknown[])
           .catch((err: unknown) => {
             this.logger.error(
               `Failed to queue messages for ${sessionId}: ${String(err)}`,
             );
           });
       }
+    });
+
+    // Handle history sync
+    socket.ev.on('messaging-history.set', (data) => {
+      if (data.messages) {
+        for (const msg of data.messages) {
+          if (msg.key?.id) {
+            sessionData.seenMessages.add(msg.key.id);
+          }
+        }
+      }
+
+      void this.queueService
+        .addHistorySyncJob(sessionId, data)
+        .catch((err: unknown) => {
+          this.logger.error(
+            `Failed to queue history sync for ${sessionId}: ${String(err)}`,
+          );
+        });
     });
 
     // Sync contacts via BullMQ queue
