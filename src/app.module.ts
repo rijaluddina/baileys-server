@@ -15,10 +15,12 @@ import { ContactModule } from './contact/contact.module.js';
 import { MiscModule } from './misc/misc.module.js';
 import { HealthModule } from './health/health.module.js';
 import { WebhookModule } from './webhook/webhook.module.js';
+import { RedisCacheModule } from './common/redis-cache.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    RedisCacheModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

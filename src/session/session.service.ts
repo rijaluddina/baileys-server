@@ -6,7 +6,10 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import makeWASocket, {
@@ -46,6 +49,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     private readonly eventEmitter: EventEmitter2,
     private readonly prisma: PrismaService,
     private readonly queueService: QueueService,
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
   async onModuleInit() {
@@ -89,12 +93,19 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.logger.log(
-      `Auto-reconnecting ${sessionsToReconnect.length} session(s)...`,
-    );
+    const total = sessionsToReconnect.length;
+    this.logger.log(`Auto-reconnecting ${total} session(s)...`);
 
-    for (const dbSession of sessionsToReconnect) {
+    for (let i = 0; i < total; i++) {
+      const dbSession = sessionsToReconnect[i];
       try {
+        if (i > 0) {
+          const delay = 500 + Math.floor(Math.random() * 500); // 500-1000ms stagger
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+        this.logger.log(
+          `Reconnecting session ${i + 1}/${total}: "${dbSession.id}"...`,
+        );
         await this.createSession(dbSession.id, {
           webhookUrl: dbSession.webhookUrl ?? undefined,
         });
@@ -171,6 +182,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     const { state, saveCreds } = await usePrismaAuthState(
       sessionId,
       this.prisma,
+      this.cache,
       this.logger,
     );
     const { version } = await fetchLatestBaileysVersion();

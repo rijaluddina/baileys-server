@@ -8,7 +8,11 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Observable } from 'rxjs';
 import {
   ApiTags,
   ApiOperation,
@@ -27,6 +31,7 @@ export class SessionController {
   constructor(
     private readonly sessionService: SessionService,
     private readonly sessionDataService: SessionDataService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @Post()
@@ -72,6 +77,60 @@ export class SessionController {
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
   async reconnect(@Param('sessionId') sessionId: string) {
     return this.sessionService.reconnectSession(sessionId);
+  }
+
+  @Sse(':sessionId/qr/stream')
+  @ApiOperation({ summary: 'Server-Sent Events for QR code updates' })
+  @ApiParam({ name: 'sessionId', description: 'Session ID' })
+  qrStream(@Param('sessionId') sessionId: string): Observable<MessageEvent> {
+    return new Observable<MessageEvent>((subscriber) => {
+      let sessionData: ReturnType<SessionService['getSessionData']>;
+      try {
+        sessionData = this.sessionService.getSessionData(sessionId);
+      } catch (err) {
+        subscriber.error(err);
+        return;
+      }
+
+      // Send initial QR if exists
+      if (sessionData.qr) {
+        subscriber.next({ data: { qr: sessionData.qr } });
+      }
+
+      // Check if already connected
+      if (sessionData.status === 'open') {
+        subscriber.complete();
+        return;
+      }
+
+      const qrListener = (data: { sessionId: string; qr: string }) => {
+        if (data.sessionId === sessionId) {
+          subscriber.next({ data: { qr: data.qr } });
+        }
+      };
+
+      const connectedListener = (data: { sessionId: string }) => {
+        if (data.sessionId === sessionId) {
+          subscriber.complete();
+        }
+      };
+
+      const loggedOutListener = (data: { sessionId: string }) => {
+        if (data.sessionId === sessionId) {
+          subscriber.complete();
+        }
+      };
+
+      this.eventEmitter.on('session.qr', qrListener);
+      this.eventEmitter.on('session.connected', connectedListener);
+      this.eventEmitter.on('session.logged-out', loggedOutListener);
+
+      return () => {
+        this.eventEmitter.off('session.qr', qrListener);
+        this.eventEmitter.off('session.connected', connectedListener);
+        this.eventEmitter.off('session.logged-out', loggedOutListener);
+      };
+    });
   }
 
   // === Data Access Endpoints ===
