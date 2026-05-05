@@ -84,4 +84,4 @@ async function bootstrap() {
   logger.log(`🔌 WebSocket at ws://localhost:${port}/ws`);
 }
 
-bootstrap();
+void bootstrap();

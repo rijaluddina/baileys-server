@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { ConflictException } from '@nestjs/common';
 import { SessionService } from './session.service.js';
 import { usePrismaAuthState } from './prisma-auth-state.js';

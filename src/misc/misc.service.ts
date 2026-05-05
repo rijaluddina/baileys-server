@@ -5,6 +5,12 @@ import {
   CreateNewsletterDto,
   SendNewsletterMessageDto,
 } from './dto/misc.dto.js';
+import type {
+  WAPrivacyValue,
+  WAPrivacyOnlineValue,
+  WAPrivacyGroupAddValue,
+  WAReadReceiptsValue,
+} from '@whiskeysockets/baileys';
 
 @Injectable()
 export class MiscService {
@@ -77,37 +83,37 @@ export class MiscService {
 
   async updateLastSeenPrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateLastSeenPrivacy(value as any);
+    await socket.updateLastSeenPrivacy(value as WAPrivacyValue);
     return { status: 'updated', setting: 'last-seen', value };
   }
 
   async updateOnlinePrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateOnlinePrivacy(value as any);
+    await socket.updateOnlinePrivacy(value as WAPrivacyOnlineValue);
     return { status: 'updated', setting: 'online', value };
   }
 
   async updateProfilePicturePrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateProfilePicturePrivacy(value as any);
+    await socket.updateProfilePicturePrivacy(value as WAPrivacyValue);
     return { status: 'updated', setting: 'profile-picture', value };
   }
 
   async updateStatusPrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateStatusPrivacy(value as any);
+    await socket.updateStatusPrivacy(value as WAPrivacyValue);
     return { status: 'updated', setting: 'status', value };
   }
 
   async updateReadReceiptsPrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateReadReceiptsPrivacy(value as any);
+    await socket.updateReadReceiptsPrivacy(value as WAReadReceiptsValue);
     return { status: 'updated', setting: 'read-receipts', value };
   }
 
   async updateGroupsAddPrivacy(sessionId: string, value: string) {
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateGroupsAddPrivacy(value as any);
+    await socket.updateGroupsAddPrivacy(value as WAPrivacyGroupAddValue);
     return { status: 'updated', setting: 'groups', value };
   }
 

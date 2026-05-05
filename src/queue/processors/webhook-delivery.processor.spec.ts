@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import axios from 'axios';
 import { Job } from 'bullmq';
 import { WebhookDeliveryProcessor } from './webhook-delivery.processor.js';

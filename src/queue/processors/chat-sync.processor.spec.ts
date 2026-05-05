@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Job } from 'bullmq';
 import { ChatSyncProcessor } from './chat-sync.processor.js';
 

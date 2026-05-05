@@ -42,7 +42,7 @@ export class SessionGateway
 
     const sessionId = client.handshake.query['sessionId'] as string;
     if (sessionId) {
-      client.join(sessionId);
+      void client.join(sessionId);
     }
     this.logger.log(`Client connected: ${client.id}`);
   }

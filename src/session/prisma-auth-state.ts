@@ -71,7 +71,9 @@ export async function usePrismaAuthState(
           let parsed = JSON.parse(row.value, BufferJSON.reviver) as unknown;
 
           if (type === 'app-state-sync-key') {
-            parsed = proto.Message.AppStateSyncKeyData.fromObject(parsed as Record<string, any>);
+            parsed = proto.Message.AppStateSyncKeyData.fromObject(
+              parsed as Record<string, any>,
+            );
           }
 
           result[id] = parsed as SignalDataTypeMap[typeof type];

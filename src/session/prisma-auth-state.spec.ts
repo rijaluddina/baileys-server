@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { usePrismaAuthState } from './prisma-auth-state.js';
 
 jest.mock('@whiskeysockets/baileys', () => ({
@@ -33,7 +34,7 @@ describe('usePrismaAuthState', () => {
 
     await state.keys.set({
       session: {
-        'key-1': { value: 'stored' } as unknown,
+        'key-1': { value: 'stored' } as unknown as Uint8Array,
         'key-2': null,
       },
     });

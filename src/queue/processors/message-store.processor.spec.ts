@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Job } from 'bullmq';
 import { MessageStoreProcessor } from './message-store.processor.js';
 

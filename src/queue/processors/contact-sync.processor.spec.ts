@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Job } from 'bullmq';
 import { ContactSyncProcessor } from './contact-sync.processor.js';
 

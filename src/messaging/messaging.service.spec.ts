@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 jest.mock('@whiskeysockets/baileys', () => ({
   __esModule: true,
   default: jest.fn(),
