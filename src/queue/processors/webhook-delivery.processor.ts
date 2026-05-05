@@ -7,6 +7,7 @@ import * as crypto from 'crypto';
 import type { Prisma } from '../../generated/prisma/client/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { QUEUE_NAMES } from '../queue.constants.js';
+import { toInputJson } from '../../common/utils/baileys-helpers.js';
 
 interface WebhookJob {
   sessionId: string;
@@ -14,10 +15,6 @@ interface WebhookJob {
   event: string;
   data: unknown;
   timestamp: string;
-}
-
-function toInputJson(value: any): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
 function getErrorMessage(error: unknown): string {
