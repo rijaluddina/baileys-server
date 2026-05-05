@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SessionService } from '../session/session.service.js';
+import { SessionDataService } from '../session/session-data.service.js';
 import { CheckNumberDto, UpdateProfilePictureDto } from './dto/contact.dto.js';
 import axios from 'axios';
 
@@ -7,7 +8,10 @@ import axios from 'axios';
 export class ContactService {
   private readonly logger = new Logger(ContactService.name);
 
-  constructor(private readonly sessionService: SessionService) {}
+  constructor(
+    private readonly sessionService: SessionService,
+    private readonly sessionDataService: SessionDataService,
+  ) {}
 
   async checkNumberExists(sessionId: string, dto: CheckNumberDto) {
     const socket = this.sessionService.getSocket(sessionId);
@@ -126,6 +130,11 @@ export class ContactService {
     offset = 0,
   ) {
     // Now reads from database with search and pagination
-    return this.sessionService.getContacts(sessionId, search, limit, offset);
+    return this.sessionDataService.getContacts(
+      sessionId,
+      search,
+      limit,
+      offset,
+    );
   }
 }

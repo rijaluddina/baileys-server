@@ -5,6 +5,8 @@ import {
   IsOptional,
   IsUrl,
   Matches,
+  MaxLength,
+  MinLength,
 } from 'class-validator';
 
 export class CreateSessionDto {
@@ -14,6 +16,8 @@ export class CreateSessionDto {
   @Matches(/^[a-zA-Z0-9_-]+$/, {
     message: 'Session ID must be alphanumeric with dashes/underscores',
   })
+  @MinLength(3)
+  @MaxLength(64)
   sessionId!: string;
 
   @ApiPropertyOptional({ description: 'Webhook URL for this session' })

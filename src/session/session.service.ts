@@ -15,12 +15,10 @@ import makeWASocket, {
   type WASocket,
   type ConnectionState,
   type BaileysEventMap,
-  type WAMessage,
   Browsers,
 } from '@whiskeysockets/baileys';
 import * as QRCode from 'qrcode';
 import pino from 'pino';
-import type { Prisma } from '../generated/prisma/client/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { QueueService } from '../queue/queue.service.js';
 import { usePrismaAuthState } from './prisma-auth-state.js';
@@ -525,142 +523,6 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
     }));
-  }
-
-  /**
-   * Get messages from DB with pagination.
-   */
-  async getMessages(
-    sessionId: string,
-    jid: string,
-    limit = 25,
-    cursor?: string,
-  ) {
-    const dbSession = await this.prisma.session.findUnique({
-      where: { id: sessionId },
-    });
-    if (!dbSession)
-      throw new NotFoundException(`Session "${sessionId}" not found`);
-
-    const where: Prisma.MessageWhereInput = { sessionId, remoteJid: jid };
-    if (cursor) {
-      where.id = { lt: cursor };
-    }
-
-    const messages = await this.prisma.message.findMany({
-      where,
-      orderBy: { timestamp: 'desc' },
-      take: limit,
-    });
-
-    return {
-      messages,
-      nextCursor:
-        messages.length === limit ? messages[messages.length - 1].id : null,
-    };
-  }
-
-  /**
-   * Get paginated contacts from DB.
-   */
-  async getContacts(
-    sessionId: string,
-    search?: string,
-    limit = 50,
-    offset = 0,
-  ) {
-    const dbSession = await this.prisma.session.findUnique({
-      where: { id: sessionId },
-    });
-    if (!dbSession)
-      throw new NotFoundException(`Session "${sessionId}" not found`);
-
-    const where: Prisma.ContactWhereInput = { sessionId };
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { notify: { contains: search, mode: 'insensitive' } },
-        { jid: { contains: search } },
-      ];
-    }
-
-    const [contacts, total] = await Promise.all([
-      this.prisma.contact.findMany({
-        where,
-        orderBy: { name: 'asc' },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.contact.count({ where }),
-    ]);
-
-    return { contacts, total, limit, offset };
-  }
-
-  /**
-   * Get paginated chats from DB.
-   */
-  async getChats(sessionId: string, limit = 50, offset = 0) {
-    const dbSession = await this.prisma.session.findUnique({
-      where: { id: sessionId },
-    });
-    if (!dbSession)
-      throw new NotFoundException(`Session "${sessionId}" not found`);
-
-    const [chats, total] = await Promise.all([
-      this.prisma.chat.findMany({
-        where: { sessionId },
-        orderBy: { conversationTimestamp: 'desc' },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.chat.count({ where: { sessionId } }),
-    ]);
-
-    // Serialize BigInt
-    const serializedChats = chats.map((c) => ({
-      ...c,
-      conversationTimestamp: c.conversationTimestamp
-        ? Number(c.conversationTimestamp)
-        : null,
-    }));
-
-    return { chats: serializedChats, total, limit, offset };
-  }
-
-  /**
-   * Get webhook delivery logs from DB.
-   */
-  async getWebhookLogs(sessionId: string, limit = 50, offset = 0) {
-    const dbSession = await this.prisma.session.findUnique({
-      where: { id: sessionId },
-    });
-    if (!dbSession)
-      throw new NotFoundException(`Session "${sessionId}" not found`);
-
-    const [logs, total] = await Promise.all([
-      this.prisma.webhookLog.findMany({
-        where: { sessionId },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.webhookLog.count({ where: { sessionId } }),
-    ]);
-
-    return { logs, total, limit, offset };
-  }
-
-  async findMessage(
-    sessionId: string,
-    jid: string,
-    messageId: string,
-  ): Promise<WAMessage | undefined> {
-    const storedMessage = await this.prisma.message.findFirst({
-      where: { sessionId, remoteJid: jid, messageId },
-    });
-
-    return storedMessage?.content as unknown as WAMessage | undefined;
   }
 
   private bindBaileysEvents(sessionId: string, socket: WASocket) {

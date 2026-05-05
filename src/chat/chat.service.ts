@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { ChatModification } from '@whiskeysockets/baileys';
 import { SessionService } from '../session/session.service.js';
+import { SessionDataService } from '../session/session-data.service.js';
 import {
   ArchiveChatDto,
   PinChatDto,
@@ -14,10 +15,14 @@ import {
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
 
-  constructor(private readonly sessionService: SessionService) {}
+  constructor(
+    private readonly sessionService: SessionService,
+    private readonly sessionDataService: SessionDataService,
+  ) {}
 
   async getChats(sessionId: string, limit = 50, offset = 0) {
-    return this.sessionService.getChats(sessionId, limit, offset);
+    // Reads from database using the new SessionDataService
+    return this.sessionDataService.getChats(sessionId, limit, offset);
   }
 
   async archiveChat(sessionId: string, dto: ArchiveChatDto) {
@@ -68,6 +73,6 @@ export class ChatService {
   async fetchMessages(sessionId: string, jid: string, dto: FetchMessagesDto) {
     // Now reads from database with pagination
     const limit = dto.limit || 25;
-    return this.sessionService.getMessages(sessionId, jid, limit);
+    return this.sessionDataService.getMessages(sessionId, jid, limit);
   }
 }

@@ -1,5 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { SessionService } from '../session/session.service.js';
+import { SessionDataService } from '../session/session-data.service.js';
+import { QueueService } from '../queue/queue.service.js';
 import type {
   AnyMessageContent,
   ChatModification,
@@ -29,7 +31,11 @@ import {
 export class MessagingService {
   private readonly logger = new Logger(MessagingService.name);
 
-  constructor(private readonly sessionService: SessionService) {}
+  constructor(
+    private readonly sessionService: SessionService,
+    private readonly sessionDataService: SessionDataService,
+    private readonly queueService: QueueService,
+  ) {}
 
   private formatJid(jid: string): string {
     if (jid.includes('@')) return jid;
@@ -52,7 +58,7 @@ export class MessagingService {
     const jid = this.formatJid(dto.to);
 
     const quoted = dto.quotedMessageId
-      ? await this.sessionService.findMessage(
+      ? await this.sessionDataService.findMessage(
           sessionId,
           jid,
           dto.quotedMessageId,
@@ -85,7 +91,7 @@ export class MessagingService {
     }
 
     const quoted = dto.quotedMessageId
-      ? await this.sessionService.findMessage(
+      ? await this.sessionDataService.findMessage(
           sessionId,
           jid,
           dto.quotedMessageId,

@@ -29,9 +29,16 @@ describe('MessagingService', () => {
     };
     const sessionService = {
       getSocket: jest.fn().mockReturnValue(socket),
+    };
+    const sessionDataService = {
       findMessage: jest.fn().mockResolvedValue(quoted),
     };
-    const service = new MessagingService(sessionService as any);
+    const queueService = {};
+    const service = new MessagingService(
+      sessionService as any,
+      sessionDataService as any,
+      queueService as any,
+    );
 
     await expect(
       service.sendText('session-1', {
@@ -41,7 +48,7 @@ describe('MessagingService', () => {
       }),
     ).resolves.toEqual({ messageId: 'sent-1', status: 'sent' });
 
-    expect(sessionService.findMessage).toHaveBeenCalledWith(
+    expect(sessionDataService.findMessage).toHaveBeenCalledWith(
       'session-1',
       '6281234567890@s.whatsapp.net',
       'quoted-1',

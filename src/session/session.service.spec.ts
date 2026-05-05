@@ -114,40 +114,6 @@ describe('SessionService', () => {
     );
   });
 
-  it('returns a stored WhatsApp message for quoting', async () => {
-    const storedMessage = {
-      content: {
-        key: {
-          remoteJid: '6281234567890@s.whatsapp.net',
-          id: 'message-1',
-          fromMe: false,
-        },
-        message: { conversation: 'hello' },
-      },
-    };
-    const { service, prisma } = createService({
-      message: {
-        findFirst: jest.fn().mockResolvedValue(storedMessage),
-      },
-    });
-
-    await expect(
-      service.findMessage(
-        'session-1',
-        '6281234567890@s.whatsapp.net',
-        'message-1',
-      ),
-    ).resolves.toEqual(storedMessage.content);
-
-    expect(prisma.message.findFirst).toHaveBeenCalledWith({
-      where: {
-        sessionId: 'session-1',
-        remoteJid: '6281234567890@s.whatsapp.net',
-        messageId: 'message-1',
-      },
-    });
-  });
-
   it('does not reconnect a session after it has been deleted during retry delay', async () => {
     jest.useFakeTimers();
     const { service, eventHandlers } = createService();

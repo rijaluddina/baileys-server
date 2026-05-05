@@ -18,12 +18,16 @@ import {
 } from '@nestjs/swagger';
 import { SessionService } from './session.service.js';
 import { CreateSessionDto } from './dto/session.dto.js';
+import { SessionDataService } from './session-data.service.js';
 
 @ApiTags('Session')
 @ApiSecurity('x-api-key')
 @Controller('sessions')
 export class SessionController {
-  constructor(private readonly sessionService: SessionService) {}
+  constructor(
+    private readonly sessionService: SessionService,
+    private readonly sessionDataService: SessionDataService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new WhatsApp session' })
@@ -94,7 +98,12 @@ export class SessionController {
     @Query('limit') limit?: number,
     @Query('cursor') cursor?: string,
   ) {
-    return this.sessionService.getMessages(sessionId, jid, limit || 25, cursor);
+    return this.sessionDataService.getMessages(
+      sessionId,
+      jid,
+      limit || 25,
+      cursor,
+    );
   }
 
   @Get(':sessionId/contacts')
@@ -124,7 +133,7 @@ export class SessionController {
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
   ) {
-    return this.sessionService.getContacts(
+    return this.sessionDataService.getContacts(
       sessionId,
       search,
       limit || 50,
@@ -152,7 +161,11 @@ export class SessionController {
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
   ) {
-    return this.sessionService.getChats(sessionId, limit || 50, offset || 0);
+    return this.sessionDataService.getChats(
+      sessionId,
+      limit || 50,
+      offset || 0,
+    );
   }
 
   @Get(':sessionId/webhooks/logs')
@@ -175,7 +188,7 @@ export class SessionController {
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
   ) {
-    return this.sessionService.getWebhookLogs(
+    return this.sessionDataService.getWebhookLogs(
       sessionId,
       limit || 50,
       offset || 0,

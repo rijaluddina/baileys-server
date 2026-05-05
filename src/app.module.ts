@@ -2,8 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { ApiKeyGuard } from './common/guards/api-key.guard.js';
+import { SessionThrottlerGuard } from './common/guards/session-throttler.guard.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { QueueModule } from './queue/queue.module.js';
 import { SessionModule } from './session/session.module.js';
@@ -37,7 +38,7 @@ import { HealthModule } from './health/health.module.js';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: SessionThrottlerGuard,
     },
     {
       provide: APP_GUARD,
