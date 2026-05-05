@@ -299,7 +299,7 @@ export class MessagingService {
         deleteForMe: {
           deleteMedia: true,
           key: messageKey,
-          timestamp: Date.now(),
+          timestamp: Math.floor(Date.now() / 1000),
         },
       };
       await socket.chatModify(modification, jid);
