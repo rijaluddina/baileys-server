@@ -13,7 +13,7 @@ interface WebhookJob {
   webhookUrl: string;
   event: string;
   data: unknown;
-  timestamp: number;
+  timestamp: string;
 }
 
 function toInputJson(value: any): Prisma.InputJsonValue {
