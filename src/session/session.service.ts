@@ -38,6 +38,46 @@ interface SessionData {
   seenMessages: Set<string>;
 }
 
+const SEEN_MESSAGES_MAX = 10_000;
+const SEEN_MESSAGES_PRUNE_TO = 5_000;
+
+function addSeenMessage(set: Set<string>, id: string): void {
+  if (set.size >= SEEN_MESSAGES_MAX) {
+    const toDelete = [...set].slice(0, set.size - SEEN_MESSAGES_PRUNE_TO);
+    for (const key of toDelete) set.delete(key);
+  }
+  set.add(id);
+}
+
+function validateWebhookUrl(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new BadRequestException(`Invalid webhook URL: ${url}`);
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new BadRequestException('Webhook URL must use http or https');
+  }
+  // Block SSRF — private/loopback/cloud-metadata ranges
+  const hostname = parsed.hostname;
+  const blocked = [
+    /^localhost$/i,
+    /^127\./,
+    /^10\./,
+    /^192\.168\./,
+    /^172\.(1[6-9]|2[0-9]|3[01])\./,
+    /^169\.254\./, // link-local / cloud metadata
+    /^::1$/,
+    /^0\.0\.0\.0$/,
+  ];
+  if (blocked.some((re) => re.test(hostname))) {
+    throw new BadRequestException(
+      'Webhook URL must not target private or loopback addresses',
+    );
+  }
+}
+
 @Injectable()
 export class SessionService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SessionService.name);
@@ -157,6 +197,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     if (this.sessions.has(sessionId)) {
       throw new ConflictException(`Session "${sessionId}" already exists`);
     }
+
+    // Validate webhook URL to prevent SSRF
+    if (options.webhookUrl) validateWebhookUrl(options.webhookUrl);
+    const globalWebhookUrl = this.configService.get<string>('WEBHOOK_URL');
+    if (globalWebhookUrl) validateWebhookUrl(globalWebhookUrl);
 
     // Preserve related data (messages, contacts, chats) when reconnecting an existing session.
     await this.prisma.session.upsert({
@@ -364,7 +409,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       const newMessages = m.messages.filter((msg) => {
         if (!msg.key?.id) return false;
         if (sessionData.seenMessages.has(msg.key.id)) return false;
-        sessionData.seenMessages.add(msg.key.id);
+        addSeenMessage(sessionData.seenMessages, msg.key.id);
         return true;
       });
 
@@ -384,7 +429,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       if (data.messages) {
         for (const msg of data.messages) {
           if (msg.key?.id) {
-            sessionData.seenMessages.add(msg.key.id);
+            addSeenMessage(sessionData.seenMessages, msg.key.id);
           }
         }
       }

@@ -22,7 +22,13 @@ describe('SessionController', () => {
         .fn()
         .mockResolvedValue({ sessionId: 'session-1', status: 'connecting' }),
     };
-    const controller = new SessionController(sessionService as any);
+    const sessionDataService = {};
+    const eventEmitter = { on: jest.fn(), off: jest.fn() };
+    const controller = new SessionController(
+      sessionService as any,
+      sessionDataService as any,
+      eventEmitter as any,
+    );
 
     await expect(controller.reconnect('session-1')).resolves.toEqual({
       sessionId: 'session-1',

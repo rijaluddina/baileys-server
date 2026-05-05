@@ -53,27 +53,27 @@ export class SessionGateway
 
   @OnEvent('session.qr')
   handleQr(payload: { sessionId: string; qr: string }) {
-    this.server.emit('qr', payload);
+    this.server.to(payload.sessionId).emit('qr', payload);
   }
 
   @OnEvent('session.pairing-code')
   handlePairingCode(payload: { sessionId: string; pairingCode: string }) {
-    this.server.emit('pairing-code', payload);
+    this.server.to(payload.sessionId).emit('pairing-code', payload);
   }
 
   @OnEvent('session.connected')
   handleConnected(payload: { sessionId: string; user: unknown }) {
-    this.server.emit('connected', payload);
+    this.server.to(payload.sessionId).emit('connected', payload);
   }
 
   @OnEvent('session.logged-out')
   handleLoggedOut(payload: { sessionId: string }) {
-    this.server.emit('logged-out', payload);
+    this.server.to(payload.sessionId).emit('logged-out', payload);
   }
 
   @OnEvent('baileys.*')
   handleBaileysEvent(payload: { sessionId: string; data: unknown }) {
-    // Forward all baileys events via WebSocket
-    this.server.emit('baileys-event', payload);
+    // Forward all baileys events via WebSocket, scoped to the session room
+    this.server.to(payload.sessionId).emit('baileys-event', payload);
   }
 }

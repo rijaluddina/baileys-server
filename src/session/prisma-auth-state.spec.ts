@@ -30,7 +30,16 @@ describe('usePrismaAuthState', () => {
       },
       $transaction: jest.fn().mockResolvedValue(undefined),
     };
-    const { state } = await usePrismaAuthState('session-1', prisma as any);
+    const mockCache = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+      del: jest.fn().mockResolvedValue(undefined),
+    };
+    const { state } = await usePrismaAuthState(
+      'session-1',
+      prisma as any,
+      mockCache as any,
+    );
 
     await state.keys.set({
       session: {

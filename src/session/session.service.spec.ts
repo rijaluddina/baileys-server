@@ -61,12 +61,18 @@ describe('SessionService', () => {
       addWebhookDeliveryJob: jest.fn().mockResolvedValue(undefined),
     };
 
+    const mockCache = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+      del: jest.fn().mockResolvedValue(undefined),
+    };
     return {
       service: new SessionService(
         configService as any,
         eventEmitter as any,
         prisma as any,
         queueService as any,
+        mockCache as any,
       ),
       prisma,
       eventHandlers,

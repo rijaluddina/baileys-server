@@ -23,6 +23,7 @@ import {
 import { SessionService } from './session.service.js';
 import { CreateSessionDto } from './dto/session.dto.js';
 import { SessionDataService } from './session-data.service.js';
+import { SessionIdPipe } from '../common/pipes/session-id.pipe.js';
 
 @ApiTags('Session')
 @ApiSecurity('x-api-key')
@@ -53,7 +54,7 @@ export class SessionController {
   @Get(':sessionId')
   @ApiOperation({ summary: 'Get session status' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
-  async getStatus(@Param('sessionId') sessionId: string) {
+  async getStatus(@Param('sessionId', SessionIdPipe) sessionId: string) {
     return this.sessionService.getStatus(sessionId);
   }
 
@@ -61,28 +62,30 @@ export class SessionController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a session and remove all data' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
-  async delete(@Param('sessionId') sessionId: string) {
+  async delete(@Param('sessionId', SessionIdPipe) sessionId: string) {
     return this.sessionService.deleteSession(sessionId);
   }
 
   @Post(':sessionId/logout')
   @ApiOperation({ summary: 'Logout from WhatsApp and delete session' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
-  async logout(@Param('sessionId') sessionId: string) {
+  async logout(@Param('sessionId', SessionIdPipe) sessionId: string) {
     return this.sessionService.logoutSession(sessionId);
   }
 
   @Post(':sessionId/reconnect')
   @ApiOperation({ summary: 'Force reconnect a session from stored auth state' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
-  async reconnect(@Param('sessionId') sessionId: string) {
+  async reconnect(@Param('sessionId', SessionIdPipe) sessionId: string) {
     return this.sessionService.reconnectSession(sessionId);
   }
 
   @Sse(':sessionId/qr/stream')
   @ApiOperation({ summary: 'Server-Sent Events for QR code updates' })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
-  qrStream(@Param('sessionId') sessionId: string): Observable<MessageEvent> {
+  qrStream(
+    @Param('sessionId', SessionIdPipe) sessionId: string,
+  ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
       let sessionData: ReturnType<SessionService['getSessionData']>;
       try {
@@ -152,7 +155,7 @@ export class SessionController {
     description: 'Cursor for pagination',
   })
   async getMessages(
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', SessionIdPipe) sessionId: string,
     @Param('jid') jid: string,
     @Query('limit') limit?: number,
     @Query('cursor') cursor?: string,
@@ -187,7 +190,7 @@ export class SessionController {
     description: 'Offset (default: 0)',
   })
   async getContacts(
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', SessionIdPipe) sessionId: string,
     @Query('search') search?: string,
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
@@ -216,7 +219,7 @@ export class SessionController {
     description: 'Offset (default: 0)',
   })
   async getChats(
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', SessionIdPipe) sessionId: string,
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
   ) {
@@ -243,7 +246,7 @@ export class SessionController {
     description: 'Offset (default: 0)',
   })
   async getWebhookLogs(
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', SessionIdPipe) sessionId: string,
     @Query('limit') limit?: number,
     @Query('offset') offset?: number,
   ) {
