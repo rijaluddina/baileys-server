@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma/client"
@@ -12,19 +9,18 @@ datasource db {
 }
 
 model Session {
-  id         String   @id
-  status     String   @default("close")
-  webhookUrl String?  @map("webhook_url")
-  userJid    String?  @map("user_jid")
-  userName   String?  @map("user_name")
-  retryCount Int      @default(0) @map("retry_count")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
+  id              String           @id
+  status          String           @default("close")
+  webhookUrl      String?          @map("webhook_url")
+  userJid         String?          @map("user_jid")
+  userName        String?          @map("user_name")
+  retryCount      Int              @default(0) @map("retry_count")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
   authCredentials AuthCredential[]
-  messages        Message[]
-  contacts        Contact[]
   chats           Chat[]
+  contacts        Contact[]
+  messages        Message[]
   webhookLogs     WebhookLog[]
 
   @@map("sessions")
@@ -34,11 +30,10 @@ model AuthCredential {
   id        String   @id @default(cuid())
   sessionId String   @map("session_id")
   key       String
-  value     String   @db.Text
+  value     String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
-  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, key])
   @@index([sessionId])
@@ -57,8 +52,7 @@ model Message {
   content     Json
   timestamp   DateTime
   createdAt   DateTime @default(now()) @map("created_at")
-
-  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, remoteJid, messageId])
   @@index([sessionId, remoteJid])
@@ -77,8 +71,7 @@ model Contact {
   status    String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
-  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, jid])
   @@index([sessionId])
@@ -97,8 +90,7 @@ model Chat {
   muted                 Boolean  @default(false)
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
-
-  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session               Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, jid])
   @@index([sessionId])
@@ -112,13 +104,12 @@ model WebhookLog {
   url        String
   payload    Json
   statusCode Int?     @map("status_code")
-  response   String?  @db.Text
+  response   String?
   attempts   Int      @default(1)
   success    Boolean  @default(false)
-  error      String?  @db.Text
+  error      String?
   createdAt  DateTime @default(now()) @map("created_at")
-
-  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([createdAt])

@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { Job } from 'bullmq';
 import axios from 'axios';
 import * as crypto from 'crypto';
-import type { Prisma } from '../../generated/prisma/client/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { QUEUE_NAMES } from '../queue.constants.js';
 import { toInputJson } from '../../common/utils/baileys-helpers.js';

@@ -124,9 +124,8 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
    * Auto-reconnect sessions that were connected before server restart.
    */
   private async autoReconnectSessions() {
-    const sessionsToReconnect = await this.prisma.session.findMany({
-      where: { status: 'open' },
-    });
+    // Reconnect all sessions in database (open, close, connecting)
+    const sessionsToReconnect = await this.prisma.session.findMany();
 
     if (sessionsToReconnect.length === 0) {
       this.logger.log('No sessions to auto-reconnect');
@@ -592,7 +591,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     return {
       sessionId: dbSession.id,
-      status: dbSession.status,
+      status: dbSession.status === 'open' ? 'close' : dbSession.status,
       user: dbSession.userJid
         ? { id: dbSession.userJid, name: dbSession.userName }
         : null,
@@ -609,7 +608,9 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       sessionId: s.id,
       status: this.sessions.has(s.id)
         ? this.sessions.get(s.id)!.status
-        : s.status,
+        : s.status === 'open'
+          ? 'close'
+          : s.status,
       user: s.userJid ? { id: s.userJid, name: s.userName } : null,
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,

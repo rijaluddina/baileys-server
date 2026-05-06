@@ -6,10 +6,17 @@ export interface Long {
   unsigned: boolean;
 }
 
-export function toLong(val: number | Long | undefined): number {
-  if (!val) return Date.now() / 1000;
+export function toLong(val: string | number | Long | undefined): number {
+  if (val === undefined || val === null) return Math.floor(Date.now() / 1000);
+  if (typeof val === 'string') return parseInt(val, 10);
   if (typeof val === 'number') return val;
-  return val.low;
+  // Handle Baileys Long object (low/high bits)
+  if ('low' in val && 'high' in val) {
+    const low = val.low >>> 0;
+    const high = val.high;
+    return high * 4294967296 + low;
+  }
+  return Math.floor(Date.now() / 1000);
 }
 
 export function getMessageType(

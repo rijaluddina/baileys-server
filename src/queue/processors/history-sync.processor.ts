@@ -2,7 +2,6 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject, Logger, forwardRef } from '@nestjs/common';
 import { Job } from 'bullmq';
 import type { Chat, Contact, WAMessage } from '@whiskeysockets/baileys';
-import type { Prisma } from '../../generated/prisma/client/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { QUEUE_NAMES } from '../queue.constants.js';
 import { QueueService } from '../queue.service.js';
@@ -106,7 +105,6 @@ export class HistorySyncProcessor extends WorkerHost {
         jid: contact.id as string,
         name: contact.name ?? null,
         notify: contact.notify ?? null,
-        verifiedName: contact.verifiedName ?? null,
         imgUrl: contact.imgUrl ?? null,
         status: contact.status ?? null,
       }));
