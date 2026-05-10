@@ -16,6 +16,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { ContactService } from './contact.service.js';
+import { JidPipe } from '../common/pipes/jid.pipe.js';
 import {
   CheckNumberDto,
   UpdateProfilePictureDto,
@@ -77,7 +78,7 @@ export class ContactController {
   @ApiQuery({ name: 'highRes', required: false })
   getProfilePicture(
     @Param('sessionId') sessionId: string,
-    @Param('jid') jid: string,
+    @Param('jid', JidPipe) jid: string,
     @Query('highRes') highRes?: string,
   ) {
     return this.contactService.getProfilePicture(
@@ -93,7 +94,7 @@ export class ContactController {
   @ApiParam({ name: 'jid' })
   getBusinessProfile(
     @Param('sessionId') sessionId: string,
-    @Param('jid') jid: string,
+    @Param('jid', JidPipe) jid: string,
   ) {
     return this.contactService.getBusinessProfile(sessionId, jid);
   }
@@ -114,7 +115,10 @@ export class ContactController {
   @ApiOperation({ summary: 'Get contact about/status' })
   @ApiParam({ name: 'sessionId' })
   @ApiParam({ name: 'jid' })
-  getStatus(@Param('sessionId') sessionId: string, @Param('jid') jid: string) {
+  getStatus(
+    @Param('sessionId') sessionId: string,
+    @Param('jid', JidPipe) jid: string,
+  ) {
     return this.contactService.getStatus(sessionId, jid);
   }
 
@@ -122,7 +126,10 @@ export class ContactController {
   @ApiOperation({ summary: 'Block a contact' })
   @ApiParam({ name: 'sessionId' })
   @ApiParam({ name: 'jid' })
-  block(@Param('sessionId') sessionId: string, @Param('jid') jid: string) {
+  block(
+    @Param('sessionId') sessionId: string,
+    @Param('jid', JidPipe) jid: string,
+  ) {
     return this.contactService.blockContact(sessionId, jid);
   }
 
@@ -130,7 +137,10 @@ export class ContactController {
   @ApiOperation({ summary: 'Unblock a contact' })
   @ApiParam({ name: 'sessionId' })
   @ApiParam({ name: 'jid' })
-  unblock(@Param('sessionId') sessionId: string, @Param('jid') jid: string) {
+  unblock(
+    @Param('sessionId') sessionId: string,
+    @Param('jid', JidPipe) jid: string,
+  ) {
     return this.contactService.unblockContact(sessionId, jid);
   }
 

@@ -16,6 +16,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { ChatService } from './chat.service.js';
+import { JidPipe } from '../common/pipes/jid.pipe.js';
 import {
   ArchiveChatDto,
   PinChatDto,
@@ -103,7 +104,7 @@ export class ChatController {
   @ApiQuery({ name: 'before', required: false })
   fetchMessages(
     @Param('sessionId') sessionId: string,
-    @Param('jid') jid: string,
+    @Param('jid', JidPipe) jid: string,
     @Query() query: FetchMessagesDto,
   ) {
     return this.chatService.fetchMessages(sessionId, jid, query);

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { ChatModification } from '@whiskeysockets/baileys';
 import { SessionService } from '../session/session.service.js';
 import { SessionDataService } from '../session/session-data.service.js';
+import { formatJid } from '../common/utils/baileys-helpers.js';
 import {
   ArchiveChatDto,
   PinChatDto,
@@ -27,46 +28,64 @@ export class ChatService {
 
   async archiveChat(sessionId: string, dto: ArchiveChatDto) {
     const socket = this.sessionService.getSocket(sessionId);
+    const jid = formatJid(dto.jid);
     const modification: ChatModification = {
       archive: dto.archive,
       lastMessages: [],
     };
-    await socket.chatModify(modification, dto.jid);
+    await socket.chatModify(modification, jid);
     return { status: dto.archive ? 'archived' : 'unarchived' };
   }
 
   async pinChat(sessionId: string, dto: PinChatDto) {
     const socket = this.sessionService.getSocket(sessionId);
+    const jid = formatJid(dto.jid);
     const modification: ChatModification = { pin: dto.pin };
-    await socket.chatModify(modification, dto.jid);
+    await socket.chatModify(modification, jid);
     return { status: dto.pin ? 'pinned' : 'unpinned' };
   }
 
   async muteChat(sessionId: string, dto: MuteChatDto) {
     const socket = this.sessionService.getSocket(sessionId);
+    const jid = formatJid(dto.jid);
     const mute =
       dto.duration === 0 ? null : (dto.duration ?? 8 * 60 * 60 * 1000);
     const modification: ChatModification = {
       mute: mute ? Date.now() + mute : null,
     };
-    await socket.chatModify(modification, dto.jid);
+    await socket.chatModify(modification, jid);
     return { status: mute ? 'muted' : 'unmuted' };
   }
 
   async markChatRead(sessionId: string, dto: MarkChatReadDto) {
     const socket = this.sessionService.getSocket(sessionId);
+    const jid = formatJid(dto.jid);
+    const lastMessage = await this.sessionDataService.getLastMessage(
+      sessionId,
+      jid,
+    );
+
     const modification: ChatModification = {
       markRead: dto.read,
-      lastMessages: [],
+      lastMessages: lastMessage ? [lastMessage] : [],
     };
-    await socket.chatModify(modification, dto.jid);
+    await socket.chatModify(modification, jid);
     return { status: dto.read ? 'read' : 'unread' };
   }
 
   async deleteChat(sessionId: string, dto: DeleteChatDto) {
     const socket = this.sessionService.getSocket(sessionId);
-    const modification: ChatModification = { delete: true, lastMessages: [] };
-    await socket.chatModify(modification, dto.jid);
+    const jid = formatJid(dto.jid);
+    const lastMessage = await this.sessionDataService.getLastMessage(
+      sessionId,
+      jid,
+    );
+
+    const modification: ChatModification = {
+      delete: true,
+      lastMessages: lastMessage ? [lastMessage] : [],
+    };
+    await socket.chatModify(modification, jid);
     return { status: 'deleted' };
   }
 

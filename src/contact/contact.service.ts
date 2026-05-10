@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { SessionService } from '../session/session.service.js';
 import { SessionDataService } from '../session/session-data.service.js';
 import { CheckNumberDto, UpdateProfilePictureDto } from './dto/contact.dto.js';
+import { isUserJid } from '../common/utils/baileys-helpers.js';
 import axios from 'axios';
 
 @Injectable()
@@ -52,10 +53,26 @@ export class ContactService {
   async getBusinessProfile(sessionId: string, jid: string) {
     const socket = this.sessionService.getSocket(sessionId);
     try {
-      const profile = await socket.getBusinessProfile(jid);
-      return { jid, profile };
-    } catch {
-      return { jid, profile: null };
+      const [profile, profilePicture, status] = await Promise.all([
+        socket.getBusinessProfile(jid).catch((err) => {
+          this.logger.debug(`Could not fetch business profile for ${jid}: ${err.message}`);
+          return null;
+        }),
+        this.getProfilePicture(sessionId, jid, true),
+        this.getStatus(sessionId, jid),
+      ]);
+
+      return {
+        jid,
+        ...(profile || {}),
+        profilePictureUrl: profilePicture?.profilePictureUrl ?? null,
+        status: status?.status ?? null,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to get business profile for ${jid}: ${error.message}`,
+      );
+      return { jid, profile: null, error: error.message };
     }
   }
 
@@ -65,30 +82,55 @@ export class ContactService {
   ) {
     const socket = this.sessionService.getSocket(sessionId);
     // Note: Baileys has a typo in the method name (updateBussinesProfile)
-    await socket.updateBussinesProfile(dto);
-    return { status: 'updated' };
+    try {
+      await socket.updateBussinesProfile(dto);
+      return { status: 'updated' };
+    } catch (error) {
+      throw new BadRequestException(
+        `Failed to update business profile: ${error.message}`,
+      );
+    }
   }
 
   async getStatus(sessionId: string, jid: string) {
     const socket = this.sessionService.getSocket(sessionId);
     try {
       const status = await socket.fetchStatus(jid);
-      return { jid, status };
+      const result = Array.isArray(status) ? status[0] : status;
+      return { jid, status: result?.status ?? null };
     } catch {
       return { jid, status: null };
     }
   }
 
   async blockContact(sessionId: string, jid: string) {
+    if (!isUserJid(jid)) {
+      throw new BadRequestException('Only user JIDs can be blocked');
+    }
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateBlockStatus(jid, 'block');
-    return { jid, status: 'blocked' };
+    try {
+      await socket.updateBlockStatus(jid, 'block');
+      return { jid, status: 'blocked' };
+    } catch (error) {
+      this.logger.error(`Failed to block contact ${jid}: ${error.message}`);
+      throw new BadRequestException(`Failed to block contact: ${error.message}`);
+    }
   }
 
   async unblockContact(sessionId: string, jid: string) {
+    if (!isUserJid(jid)) {
+      throw new BadRequestException('Only user JIDs can be unblocked');
+    }
     const socket = this.sessionService.getSocket(sessionId);
-    await socket.updateBlockStatus(jid, 'unblock');
-    return { jid, status: 'unblocked' };
+    try {
+      await socket.updateBlockStatus(jid, 'unblock');
+      return { jid, status: 'unblocked' };
+    } catch (error) {
+      this.logger.error(`Failed to unblock contact ${jid}: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to unblock contact: ${error.message}`,
+      );
+    }
   }
 
   async updateProfilePicture(sessionId: string, dto: UpdateProfilePictureDto) {

@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { SessionService } from '../session/session.service.js';
 import { SessionDataService } from '../session/session-data.service.js';
 import { QueueService } from '../queue/queue.service.js';
+import { formatJid } from '../common/utils/baileys-helpers.js';
 import type {
   AnyMessageContent,
   ChatModification,
@@ -38,9 +39,7 @@ export class MessagingService {
   ) {}
 
   private formatJid(jid: string): string {
-    if (jid.includes('@')) return jid;
-    const cleaned = jid.replace(/[^0-9]/g, '');
-    return `${cleaned}@s.whatsapp.net`;
+    return formatJid(jid);
   }
 
   private toWAMessage(message: Record<string, unknown>): WAMessage {

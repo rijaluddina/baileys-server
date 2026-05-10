@@ -44,3 +44,26 @@ export function getMessageType(
 export function toInputJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
+
+export function formatJid(jid: string): string {
+  if (jid.includes('@')) return jid;
+  const cleaned = jid.replace(/[^0-9]/g, '');
+  return `${cleaned}@s.whatsapp.net`;
+}
+
+export function isValidJid(jid: string): boolean {
+  return (
+    jid.endsWith('@s.whatsapp.net') ||
+    jid.endsWith('@g.us') ||
+    jid.endsWith('@lid') ||
+    jid.endsWith('@newsletter')
+  );
+}
+
+export function isUserJid(jid: string): boolean {
+  return jid.endsWith('@s.whatsapp.net') || jid.endsWith('@lid');
+}
+
+export function isGroupJid(jid: string): boolean {
+  return jid.endsWith('@g.us');
+}

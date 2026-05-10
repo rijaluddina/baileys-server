@@ -54,8 +54,14 @@ export class SessionDataService {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { notify: { contains: search, mode: 'insensitive' } },
-        { jid: { contains: search } },
+        { jid: { contains: search, mode: 'insensitive' } },
       ];
+
+      // If search is numeric, also search JID without the suffix
+      const cleanedSearch = search.replace(/[^0-9]/g, '');
+      if (cleanedSearch && cleanedSearch.length > 3) {
+        where.OR.push({ jid: { contains: cleanedSearch } });
+      }
     }
 
     const [contacts, total] = await Promise.all([
@@ -128,5 +134,26 @@ export class SessionDataService {
     });
 
     return storedMessage?.content as unknown as WAMessage | undefined;
+  }
+
+  async getLastMessage(
+    sessionId: string,
+    jid: string,
+  ): Promise<WAMessage | undefined> {
+    const storedMessage = await this.prisma.message.findFirst({
+      where: { sessionId, remoteJid: jid },
+      orderBy: { timestamp: 'desc' },
+    });
+
+    if (!storedMessage) return undefined;
+
+    return {
+      key: {
+        remoteJid: storedMessage.remoteJid,
+        fromMe: storedMessage.fromMe,
+        id: storedMessage.messageId,
+      },
+      messageTimestamp: Math.floor(storedMessage.timestamp.getTime() / 1000),
+    } as any;
   }
 }
