@@ -2,11 +2,9 @@
 import { ConflictException } from '@nestjs/common';
 import { SessionService } from './session.service.js';
 import { usePrismaAuthState } from './prisma-auth-state.js';
-import makeWASocket, {
-  fetchLatestBaileysVersion,
-} from '@whiskeysockets/baileys';
+import makeWASocket, { fetchLatestBaileysVersion } from 'baileys';
 
-jest.mock('@whiskeysockets/baileys', () => ({
+jest.mock('baileys', () => ({
   __esModule: true,
   default: jest.fn(),
   DisconnectReason: { loggedOut: 401 },

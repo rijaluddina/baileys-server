@@ -10,7 +10,7 @@ import type {
   WAPrivacyOnlineValue,
   WAPrivacyGroupAddValue,
   WAReadReceiptsValue,
-} from '@whiskeysockets/baileys';
+} from 'baileys';
 
 @Injectable()
 export class MiscService {

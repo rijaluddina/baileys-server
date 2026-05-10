@@ -62,8 +62,8 @@
     "@nestjs/websockets": "^11.1.19",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
-    "@whiskeysockets/baileys": "7.0.0-rc.9",
     "axios": "^1.15.0",
+    "baileys": "github:WhiskeySockets/Baileys",
     "bullmq": "^5.74.1",
     "cache-manager": "^7.2.8",
     "cache-manager-ioredis-yet": "^2.1.2",
@@ -144,7 +144,7 @@
       ]
     },
     "transformIgnorePatterns": [
-      "/node_modules/(?!(@whiskeysockets/baileys|@whiskeysockets/.*|node-fetch|data-uri-to-buffer|fetch-blob|formdata-polyfill|p-queue|p-timeout|eventemitter3)/)"
+      "/node_modules/(?!(baileys|@whiskeysockets/.*|node-fetch|data-uri-to-buffer|fetch-blob|formdata-polyfill|p-queue|p-timeout|eventemitter3)/)"
     ],
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"

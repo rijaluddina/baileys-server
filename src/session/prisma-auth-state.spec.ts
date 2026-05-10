@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { usePrismaAuthState } from './prisma-auth-state.js';
 
-jest.mock('@whiskeysockets/baileys', () => ({
+jest.mock('baileys', () => ({
   initAuthCreds: jest.fn(() => ({})),
   BufferJSON: {
     replacer: (_key: string, value: unknown) => value,

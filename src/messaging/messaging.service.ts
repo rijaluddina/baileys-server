@@ -9,7 +9,7 @@ import type {
   MiscMessageGenerationOptions,
   WAMessage,
   WAMessageKey,
-} from '@whiskeysockets/baileys';
+} from 'baileys';
 import axios from 'axios';
 import {
   SendTextDto,

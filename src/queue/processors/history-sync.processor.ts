@@ -1,7 +1,7 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject, Logger, forwardRef } from '@nestjs/common';
 import { Job } from 'bullmq';
-import type { Chat, Contact, WAMessage } from '@whiskeysockets/baileys';
+import type { Chat, Contact, WAMessage } from 'baileys';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { QUEUE_NAMES } from '../queue.constants.js';
 import { QueueService } from '../queue.service.js';

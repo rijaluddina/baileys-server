@@ -19,7 +19,7 @@ import makeWASocket, {
   type ConnectionState,
   type BaileysEventMap,
   Browsers,
-} from '@whiskeysockets/baileys';
+} from 'baileys';
 import * as QRCode from 'qrcode';
 import pino from 'pino';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -105,7 +105,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     for (const [id, session] of this.sessions) {
       try {
-        session.socket.end(undefined);
+        await session.socket.end(undefined);
       } catch {
         // Socket may already be closed
       }
@@ -274,6 +274,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
+    // Baileys throws "Connection Closed" during normal reconnect lifecycle; suppress it.
+    const isBaileysLifecycleError = (err: unknown) =>
+      err instanceof Error &&
+      /Connection (Closed|Terminated|Lost)|Timed Out/i.test(err.message);
+
     // Connection update handler
     socket.ev.on('connection.update', (update: Partial<ConnectionState>) => {
       void (async () => {
@@ -391,7 +396,13 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
             this.emitWebhook(sessionId, 'connection', { status: 'logged-out' });
           }
         }
-      })();
+      })().catch((err: unknown) => {
+        if (!isBaileysLifecycleError(err)) {
+          this.logger.error(
+            `connection.update error for "${sessionId}": ${String(err)}`,
+          );
+        }
+      });
     });
 
     // Save credentials on update (to DB via Prisma)
@@ -484,6 +495,16 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
         });
     });
 
+    socket.ev.on('chats.delete', (jids: string[]) => {
+      void this.prisma.chat
+        .deleteMany({ where: { sessionId, jid: { in: jids } } })
+        .catch((err: unknown) => {
+          this.logger.error(
+            `Failed to delete chats for ${sessionId}: ${String(err)}`,
+          );
+        });
+    });
+
     // Forward all Baileys events to webhook
     this.bindBaileysEvents(sessionId, socket);
 
@@ -509,7 +530,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     if (session) {
       try {
-        session.socket.end(undefined);
+        await session.socket.end(undefined);
       } catch {
         // Socket may already be closed
       }
@@ -552,16 +573,16 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
   }
 
   async reconnectSession(sessionId: string) {
-    this.removeFromMemory(sessionId);
+    await this.removeFromMemory(sessionId);
     return this.createSession(sessionId);
   }
 
-  removeFromMemory(sessionId: string) {
+  async removeFromMemory(sessionId: string) {
     this.clearReconnectTimer(sessionId);
     const session = this.sessions.get(sessionId);
     if (session) {
       try {
-        session.socket.end(undefined);
+        await session.socket.end(undefined);
       } catch {
         // Socket may already be closed
       }

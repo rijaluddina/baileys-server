@@ -22,6 +22,10 @@ model Session {
   contacts        Contact[]
   messages        Message[]
   webhookLogs     WebhookLog[]
+  groups          Group[]
+  webhooks        Webhook[]
+  sessionEvents   SessionEvent[]
+  auditLogs       AuditLog[]
 
   @@map("sessions")
 }
@@ -29,49 +33,54 @@ model Session {
 model AuthCredential {
   id        String   @id @default(cuid())
   sessionId String   @map("session_id")
-  key       String
-  value     String
+  type      String
+  keyId     String   @map("key_id")
+  data      String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  @@unique([sessionId, key])
+  @@unique([sessionId, type, keyId])
   @@index([sessionId])
   @@map("auth_credentials")
 }
 
 model Message {
-  id          String   @id @default(cuid())
-  sessionId   String   @map("session_id")
-  remoteJid   String   @map("remote_jid")
-  messageId   String   @map("message_id")
-  fromMe      Boolean  @default(false) @map("from_me")
-  participant String?
-  pushName    String?  @map("push_name")
-  messageType String?  @map("message_type")
-  content     Json
-  timestamp   DateTime
-  createdAt   DateTime @default(now()) @map("created_at")
-  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  sessionId    String   @map("session_id")
+  remoteJid    String   @map("remote_jid")
+  messageId    String   @map("message_id")
+  fromMe       Boolean  @default(false) @map("from_me")
+  participant  String?
+  pushName     String?  @map("push_name")
+  messageType  String?  @map("message_type")
+  content      Json
+  contextInfo  Json?    @map("context_info")
+  status       String   @default("pending")
+  timestamp    DateTime
+  createdAt    DateTime @default(now()) @map("created_at")
+  session      Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, remoteJid, messageId])
   @@index([sessionId, remoteJid])
   @@index([sessionId, timestamp])
   @@index([createdAt])
+  @@index([sessionId, status])
   @@map("messages")
 }
 
 model Contact {
-  id        String   @id @default(cuid())
-  sessionId String   @map("session_id")
-  jid       String
-  name      String?
-  notify    String?
-  imgUrl    String?  @map("img_url")
-  status    String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  sessionId        String   @map("session_id")
+  jid              String
+  name             String?
+  notify           String?
+  imgUrl           String?  @map("profile_picture_url")
+  pushName         String?  @map("push_name")
+  status           String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  session          Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, jid])
   @@index([sessionId])
@@ -88,6 +97,7 @@ model Chat {
   archived              Boolean  @default(false)
   pinned                Boolean  @default(false)
   muted                 Boolean  @default(false)
+  muteEndTime           BigInt?  @map("mute_end_time")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
   session               Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -115,4 +125,86 @@ model WebhookLog {
   @@index([createdAt])
   @@index([success])
   @@map("webhook_logs")
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  jid         String   @unique @map("group_jid")
+  subject     String?
+  description  String?  @map("group_description")
+  ownerJid    String?  @map("owner_jid")
+  participants Json    @default("[]")
+  settings    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("groups")
+}
+
+model Webhook {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  name      String
+  url       String
+  secret    String?
+  events    String[] @default([])
+  headers   Json     @default("{}")
+  active    Boolean  @default(true)
+  maxRetries Int     @default(3) @map("max_retries")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([active])
+  @@map("webhooks")
+}
+
+model SessionEvent {
+  id            String   @id @default(cuid())
+  sessionId     String   @map("session_id")
+  eventType     String   @map("event_type")
+  payload       Json
+  sequenceNumber BigInt  @default(0) @map("sequence_number")
+  createdAt     DateTime @default(now()) @map("created_at")
+  session       Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, sequenceNumber])
+  @@index([sessionId, eventType])
+  @@map("session_events")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  sessionId    String?  @map("session_id")
+  userId       String?  @map("user_id")
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  metadata     Json?
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+  session      Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  response    Json?
+  statusCode  Int      @default(0) @map("status_code")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([expiresAt])
+  @@map("idempotency_keys")
 }

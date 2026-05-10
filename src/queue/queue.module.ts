@@ -8,6 +8,11 @@ import { HistorySyncProcessor } from './processors/history-sync.processor.js';
 import { WebhookDeliveryProcessor } from './processors/webhook-delivery.processor.js';
 import { MessageCleanupProcessor } from './processors/message-cleanup.processor.js';
 import { QueueService } from './queue.service.js';
+import { MessageProducer } from './producers/message.producer.js';
+import { MediaProducer } from './producers/media.producer.js';
+import { GroupProducer } from './producers/group.producer.js';
+import { WebhookProducer } from './producers/webhook.producer.js';
+import { IdempotencyStrategy } from './strategies/idempotency.strategy.js';
 
 import { QUEUE_NAMES } from './queue.constants.js';
 
@@ -36,6 +41,14 @@ import { QUEUE_NAMES } from './queue.constants.js';
       { name: QUEUE_NAMES.HISTORY_SYNC },
       { name: QUEUE_NAMES.WEBHOOK_DELIVERY },
       { name: QUEUE_NAMES.MESSAGE_CLEANUP },
+      { name: QUEUE_NAMES.MESSAGE_SEND },
+      { name: QUEUE_NAMES.MESSAGE_EDIT },
+      { name: QUEUE_NAMES.MESSAGE_DELETE },
+      { name: QUEUE_NAMES.MEDIA_UPLOAD },
+      { name: QUEUE_NAMES.MEDIA_DOWNLOAD },
+      { name: QUEUE_NAMES.GROUP_ACTION },
+      { name: QUEUE_NAMES.WEBHOOK_DELIVER },
+      { name: QUEUE_NAMES.SESSION_INIT },
     ),
   ],
   providers: [
@@ -46,7 +59,20 @@ import { QUEUE_NAMES } from './queue.constants.js';
     HistorySyncProcessor,
     WebhookDeliveryProcessor,
     MessageCleanupProcessor,
+    MessageProducer,
+    MediaProducer,
+    GroupProducer,
+    WebhookProducer,
+    IdempotencyStrategy,
   ],
-  exports: [QueueService, BullModule],
+  exports: [
+    QueueService,
+    BullModule,
+    MessageProducer,
+    MediaProducer,
+    GroupProducer,
+    WebhookProducer,
+    IdempotencyStrategy,
+  ],
 })
 export class QueueModule {}

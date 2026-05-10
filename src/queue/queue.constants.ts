@@ -5,4 +5,12 @@ export const QUEUE_NAMES = {
   HISTORY_SYNC: 'history-sync',
   WEBHOOK_DELIVERY: 'webhook-delivery',
   MESSAGE_CLEANUP: 'message-cleanup',
+  MESSAGE_SEND: 'message-send',
+  MESSAGE_EDIT: 'message-edit',
+  MESSAGE_DELETE: 'message-delete',
+  MEDIA_UPLOAD: 'media-upload',
+  MEDIA_DOWNLOAD: 'media-download',
+  GROUP_ACTION: 'group-action',
+  WEBHOOK_DELIVER: 'webhook-deliver',
+  SESSION_INIT: 'session-init',
 } as const;

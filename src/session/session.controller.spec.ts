@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { SessionController } from './session.controller.js';
 
-jest.mock('@whiskeysockets/baileys', () => ({
+jest.mock('baileys', () => ({
   __esModule: true,
   default: jest.fn(),
   DisconnectReason: { loggedOut: 401 },

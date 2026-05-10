@@ -4,20 +4,17 @@ import type {
   AuthenticationState,
   SignalDataSet,
   SignalDataTypeMap,
-} from '@whiskeysockets/baileys';
-import { proto } from '@whiskeysockets/baileys';
-import { initAuthCreds, BufferJSON } from '@whiskeysockets/baileys';
+} from 'baileys';
+import { proto } from 'baileys';
+import { initAuthCreds, BufferJSON } from 'baileys';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import type { Cache } from 'cache-manager';
+import type { Prisma } from '../generated/prisma/client/client.js';
 
-function buildKey(type: string, id: string): string {
-  return `${type}-${id}`;
+function buildKeys(type: string, id: string): { type: string; keyId: string } {
+  return { type, keyId: id };
 }
 
-/**
- * Custom Prisma-backed auth state for Baileys.
- * Replaces `useMultiFileAuthState` with PostgreSQL storage via Prisma.
- */
 export async function usePrismaAuthState(
   sessionId: string,
   prisma: PrismaService,
@@ -26,7 +23,6 @@ export async function usePrismaAuthState(
 ): Promise<{ state: AuthenticationState; saveCreds: () => Promise<void> }> {
   const credsCacheKey = `auth:${sessionId}:creds`;
 
-  // Load or initialize credentials
   let creds: AuthenticationCreds | null = null;
 
   try {
@@ -40,18 +36,16 @@ export async function usePrismaAuthState(
 
   if (!creds) {
     const credsRow = await prisma.authCredential.findUnique({
-      where: { sessionId_key: { sessionId, key: 'creds' } },
+      where: { sessionId_type_keyId: { sessionId, type: 'creds', keyId: '' } },
     });
 
     if (credsRow) {
       creds = JSON.parse(
-        credsRow.value,
+        credsRow.data,
         BufferJSON.reviver,
       ) as AuthenticationCreds;
-
-      // Update cache
       void cache
-        .set(credsCacheKey, credsRow.value)
+        .set(credsCacheKey, credsRow.data)
         .catch((e) => logger?.error(`Cache write error (creds): ${e}`));
     } else {
       creds = initAuthCreds();
@@ -60,15 +54,15 @@ export async function usePrismaAuthState(
 
   const saveCreds = async () => {
     try {
-      const value = JSON.stringify(creds, BufferJSON.replacer);
+      const data = JSON.stringify(creds, BufferJSON.replacer);
       await prisma.authCredential.upsert({
-        where: { sessionId_key: { sessionId, key: 'creds' } },
-        create: { sessionId, key: 'creds', value },
-        update: { value },
+        where: {
+          sessionId_type_keyId: { sessionId, type: 'creds', keyId: '' },
+        },
+        create: { sessionId, type: 'creds', keyId: '', data },
+        update: { data },
       });
-
-      // Update cache
-      await cache.set(credsCacheKey, value);
+      await cache.set(credsCacheKey, data);
     } catch (err) {
       logger?.error(
         `Failed to save credentials for session "${sessionId}": ${err}`,
@@ -89,7 +83,6 @@ export async function usePrismaAuthState(
 
         const missingIds: string[] = [];
 
-        // Try Cache first
         for (const id of ids) {
           const cacheKey = `auth:${sessionId}:key:${type}:${id}`;
           try {
@@ -112,31 +105,22 @@ export async function usePrismaAuthState(
 
         if (missingIds.length === 0) return result;
 
-        // Fallback to DB
-        const keys = missingIds.map((id) => buildKey(type, id));
         const rows = await prisma.authCredential.findMany({
-          where: {
-            sessionId,
-            key: { in: keys },
-          },
+          where: { sessionId, type, keyId: { in: missingIds } },
         });
 
         for (const row of rows) {
-          const prefix = `${type}-`;
-          const id = row.key.slice(prefix.length);
-
-          let parsed = JSON.parse(row.value, BufferJSON.reviver) as unknown;
+          let parsed = JSON.parse(row.data, BufferJSON.reviver) as unknown;
           if (type === 'app-state-sync-key') {
             parsed = proto.Message.AppStateSyncKeyData.fromObject(
               parsed as Record<string, any>,
             );
           }
-          result[id] = parsed as SignalDataTypeMap[typeof type];
+          result[row.keyId] = parsed as SignalDataTypeMap[typeof type];
 
-          // Backfill cache
-          const cacheKey = `auth:${sessionId}:key:${type}:${id}`;
+          const cacheKey = `auth:${sessionId}:key:${type}:${row.keyId}`;
           void cache
-            .set(cacheKey, row.value)
+            .set(cacheKey, row.data)
             .catch((e) => logger?.error(`Cache backfill error: ${e}`));
         }
 
@@ -144,31 +128,32 @@ export async function usePrismaAuthState(
       },
 
       set: async (data: SignalDataSet): Promise<void> => {
-        const operations: any[] = [];
+        const operations: Prisma.PrismaPromise<unknown>[] = [];
 
         for (const _type in data) {
-          const type = _type as keyof SignalDataTypeMap;
-          const entries = data[type];
+          const typ = _type as keyof SignalDataTypeMap;
+          const entries = data[typ];
           if (!entries) continue;
 
           for (const id in entries) {
             const value = entries[id];
-            const key = buildKey(type, id);
+            const { type: t, keyId } = buildKeys(typ, id);
 
             if (value) {
               const serialized = JSON.stringify(value, BufferJSON.replacer);
               operations.push(
                 prisma.authCredential.upsert({
-                  where: { sessionId_key: { sessionId, key } },
-                  create: { sessionId, key, value: serialized },
-                  update: { value: serialized },
+                  where: {
+                    sessionId_type_keyId: { sessionId, type: t, keyId },
+                  },
+                  create: { sessionId, type: t, keyId, data: serialized },
+                  update: { data: serialized },
                 }),
               );
             } else {
-              // Delete the key
               operations.push(
                 prisma.authCredential.deleteMany({
-                  where: { sessionId, key },
+                  where: { sessionId, type: t, keyId },
                 }),
               );
             }
@@ -179,15 +164,14 @@ export async function usePrismaAuthState(
           try {
             await prisma.$transaction(operations);
 
-            // Update/Delete Cache
             for (const _type in data) {
-              const type = _type as keyof SignalDataTypeMap;
-              const entries = data[type];
+              const typ = _type as keyof SignalDataTypeMap;
+              const entries = data[typ];
               if (!entries) continue;
 
               for (const id in entries) {
                 const value = entries[id];
-                const cacheKey = `auth:${sessionId}:key:${type}:${id}`;
+                const cacheKey = `auth:${sessionId}:key:${typ}:${id}`;
                 if (value) {
                   const serialized = JSON.stringify(value, BufferJSON.replacer);
                   await cache.set(cacheKey, serialized);

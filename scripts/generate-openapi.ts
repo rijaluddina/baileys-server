@@ -4,7 +4,7 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { AppModule } from '../../src/app.module.js';
+import { AppModule } from '../src/app.module.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';

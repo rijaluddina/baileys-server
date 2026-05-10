@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { Prisma } from '../generated/prisma/client/client.js';
-import { WAMessage } from '@whiskeysockets/baileys';
+import { WAMessage } from 'baileys';
 
 @Injectable()
 export class SessionDataService {
@@ -154,6 +154,6 @@ export class SessionDataService {
         id: storedMessage.messageId,
       },
       messageTimestamp: Math.floor(storedMessage.timestamp.getTime() / 1000),
-    } as any;
+    };
   }
 }

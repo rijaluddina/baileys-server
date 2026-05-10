@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ApiKeyGuard } from './common/guards/api-key.guard.js';
 import { SessionThrottlerGuard } from './common/guards/session-throttler.guard.js';
@@ -16,11 +16,15 @@ import { MiscModule } from './misc/misc.module.js';
 import { HealthModule } from './health/health.module.js';
 import { WebhookModule } from './webhook/webhook.module.js';
 import { RedisCacheModule } from './common/redis-cache.module.js';
+import { RedisModule } from './redis/redis.module.js';
+import { EventModule } from './event/event.module.js';
+import { BaileysExceptionFilter } from './common/filters/baileys-exception.filter.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     RedisCacheModule,
+    RedisModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -38,6 +42,7 @@ import { RedisCacheModule } from './common/redis-cache.module.js';
     MiscModule,
     HealthModule,
     WebhookModule,
+    EventModule,
   ],
   providers: [
     {
@@ -47,6 +52,10 @@ import { RedisCacheModule } from './common/redis-cache.module.js';
     {
       provide: APP_GUARD,
       useClass: ApiKeyGuard,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: BaileysExceptionFilter,
     },
   ],
 })

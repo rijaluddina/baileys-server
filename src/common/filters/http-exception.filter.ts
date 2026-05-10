@@ -12,7 +12,28 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
+  // Baileys throws these during normal connection lifecycle; suppress them.
+  private static readonly IGNORED_MESSAGES = new Set([
+    'Connection Closed',
+    'Connection Terminated',
+    'Connection Lost',
+    'Timed Out',
+  ]);
+
   catch(exception: unknown, host: ArgumentsHost) {
+    // Non-HTTP contexts (WebSocket, background tasks) — just log and return
+    if (host.getType() !== 'http') {
+      if (exception instanceof Error) {
+        if (!AllExceptionsFilter.IGNORED_MESSAGES.has(exception.message)) {
+          this.logger.error(
+            `Unhandled error: ${exception.message}`,
+            exception.stack,
+          );
+        }
+      }
+      return;
+    }
+
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<FastifyReply>();
     const request = ctx.getRequest<FastifyRequest>();
@@ -30,10 +51,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
             exception.message);
     } else if (exception instanceof Error) {
       message = exception.message;
-      this.logger.error(
-        `Unhandled error: ${exception.message}`,
-        exception.stack,
-      );
+      if (!AllExceptionsFilter.IGNORED_MESSAGES.has(exception.message)) {
+        this.logger.error(
+          `Unhandled error: ${exception.message}`,
+          exception.stack,
+        );
+      }
     }
 
     response.status(status).send({

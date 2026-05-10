@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-jest.mock('@whiskeysockets/baileys', () => ({
+jest.mock('baileys', () => ({
   __esModule: true,
   default: jest.fn(),
   DisconnectReason: { loggedOut: 401 },

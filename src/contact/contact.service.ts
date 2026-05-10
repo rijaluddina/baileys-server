@@ -54,8 +54,11 @@ export class ContactService {
     const socket = this.sessionService.getSocket(sessionId);
     try {
       const [profile, profilePicture, status] = await Promise.all([
-        socket.getBusinessProfile(jid).catch((err) => {
-          this.logger.debug(`Could not fetch business profile for ${jid}: ${err.message}`);
+        socket.getBusinessProfile(jid).catch((err: unknown) => {
+          const error = err as Error;
+          this.logger.debug(
+            `Could not fetch business profile for ${jid}: ${error.message}`,
+          );
           return null;
         }),
         this.getProfilePicture(sessionId, jid, true),
@@ -69,10 +72,11 @@ export class ContactService {
         status: status?.status ?? null,
       };
     } catch (error) {
+      const err = error as Error;
       this.logger.error(
-        `Failed to get business profile for ${jid}: ${error.message}`,
+        `Failed to get business profile for ${jid}: ${err.message}`,
       );
-      return { jid, profile: null, error: error.message };
+      return { jid, profile: null, error: err.message };
     }
   }
 
@@ -86,8 +90,9 @@ export class ContactService {
       await socket.updateBussinesProfile(dto);
       return { status: 'updated' };
     } catch (error) {
+      const err = error as Error;
       throw new BadRequestException(
-        `Failed to update business profile: ${error.message}`,
+        `Failed to update business profile: ${err.message}`,
       );
     }
   }
@@ -112,8 +117,9 @@ export class ContactService {
       await socket.updateBlockStatus(jid, 'block');
       return { jid, status: 'blocked' };
     } catch (error) {
-      this.logger.error(`Failed to block contact ${jid}: ${error.message}`);
-      throw new BadRequestException(`Failed to block contact: ${error.message}`);
+      const err = error as Error;
+      this.logger.error(`Failed to block contact ${jid}: ${err.message}`);
+      throw new BadRequestException(`Failed to block contact: ${err.message}`);
     }
   }
 
@@ -126,9 +132,10 @@ export class ContactService {
       await socket.updateBlockStatus(jid, 'unblock');
       return { jid, status: 'unblocked' };
     } catch (error) {
-      this.logger.error(`Failed to unblock contact ${jid}: ${error.message}`);
+      const err = error as Error;
+      this.logger.error(`Failed to unblock contact ${jid}: ${err.message}`);
       throw new BadRequestException(
-        `Failed to unblock contact: ${error.message}`,
+        `Failed to unblock contact: ${err.message}`,
       );
     }
   }
