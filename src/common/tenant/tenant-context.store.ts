@@ -6,17 +6,27 @@ export interface TenantContext {
 }
 
 const store = new AsyncLocalStorage<TenantContext>();
+let storageInstance: AsyncLocalStorage<TenantContext> = store;
 
 export class TenantContextStore {
   static set(ctx: TenantContext): void {
-    store.enterWith(ctx);
+    storageInstance.enterWith(ctx);
   }
 
   static get(): TenantContext | undefined {
-    return store.getStore();
+    const ctx = storageInstance.getStore();
+    if (ctx && ctx.tenantId === '') {
+      return undefined;
+    }
+    return ctx;
   }
 
   static clear(): void {
-    store.enterWith(undefined as any);
+    storageInstance = new AsyncLocalStorage<TenantContext>();
+  }
+
+  static isEmpty(): boolean {
+    const ctx = storageInstance.getStore();
+    return !ctx || !ctx.tenantId;
   }
 }

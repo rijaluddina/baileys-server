@@ -1,5 +1,5 @@
-import { SetMetadata } from '@nestjs/common';
 import { TenantContextStore } from './tenant-context.store';
+import { TenantContextError } from './tenant-context.error';
 
 export const TENANT_KEY = 'tenant';
 
@@ -12,8 +12,8 @@ export function Tenant(): MethodDecorator {
     const originalMethod = descriptor.value;
     descriptor.value = function (...args: any[]) {
       const tenant = TenantContextStore.get();
-      if (!tenant) {
-        throw new Error('Tenant context not set');
+      if (!tenant || !tenant.tenantId) {
+        throw new TenantContextError('Tenant context not set');
       }
       return originalMethod.apply(this, args);
     };

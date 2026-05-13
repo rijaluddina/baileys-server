@@ -6,6 +6,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { TenantContextError } from './tenant-context.error';
 
 @Catch()
 export class TenantFilter implements ExceptionFilter {
@@ -13,6 +14,16 @@ export class TenantFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+
+    if (exception instanceof TenantContextError) {
+      response.status(HttpStatus.BAD_REQUEST).json({
+        statusCode: HttpStatus.BAD_REQUEST,
+        timestamp: new Date().toISOString(),
+        path: request.url,
+        message: 'Tenant context error',
+      });
+      return;
+    }
 
     const status =
       exception instanceof HttpException
@@ -23,16 +34,6 @@ export class TenantFilter implements ExceptionFilter {
       exception instanceof HttpException
         ? exception.getResponse()
         : 'Internal server error';
-
-    if (exception instanceof Error && exception.message.includes('tenant')) {
-      response.status(HttpStatus.BAD_REQUEST).json({
-        statusCode: HttpStatus.BAD_REQUEST,
-        timestamp: new Date().toISOString(),
-        path: request.url,
-        message: 'Tenant context error',
-      });
-      return;
-    }
 
     response.status(status).json({
       statusCode: status,
