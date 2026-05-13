@@ -22,17 +22,36 @@ import { QUEUE_NAMES } from './queue.constants.js';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.get<string>('REDIS_URL');
+        let connection: any = {
           host: configService.get<string>('REDIS_HOST', 'localhost'),
           port: configService.get<number>('REDIS_PORT', 6379),
           password: configService.get<string>('REDIS_PASSWORD') || undefined,
-        },
-        defaultJobOptions: {
-          removeOnComplete: { count: 1000 },
-          removeOnFail: { count: 5000 },
-        },
-      }),
+        };
+
+        if (redisUrl) {
+          try {
+            const parsed = new URL(redisUrl);
+            connection = {
+              host: parsed.hostname,
+              port: parseInt(parsed.port, 10) || 6379,
+              username: parsed.username || undefined,
+              password: parsed.password || undefined,
+            };
+          } catch (e) {
+            // Fallback to defaults if URL is invalid
+          }
+        }
+
+        return {
+          connection,
+          defaultJobOptions: {
+            removeOnComplete: { count: 1000 },
+            removeOnFail: { count: 5000 },
+          },
+        };
+      },
     }),
     BullModule.registerQueue(
       { name: QUEUE_NAMES.MESSAGE_STORE },

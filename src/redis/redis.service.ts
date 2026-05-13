@@ -24,11 +24,20 @@ class RedisServiceClass {
     const url =
       this.configService.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
     const Redis = require('ioredis');
-    this.client = new Redis(url, {
+    
+    const options: any = {
       lazyConnect: false,
       retryStrategy: (times: number) => Math.min(times * 100, 3000),
       maxRetriesPerRequest: 3,
-    });
+    };
+
+    const password = this.configService.get<string>('REDIS_PASSWORD');
+    const username = this.configService.get<string>('REDIS_USERNAME');
+
+    if (password) options.password = password;
+    if (username) options.username = username;
+
+    this.client = new Redis(url, options);
 
     this.client.on('connect', () => this.logger.log('Connected to Redis'));
     this.client.on('error', (err: Error) =>

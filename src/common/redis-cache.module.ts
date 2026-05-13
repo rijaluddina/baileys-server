@@ -8,13 +8,32 @@ import { redisStore } from 'cache-manager-ioredis-yet';
   imports: [
     CacheModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        store: redisStore,
-        host: configService.get<string>('REDIS_HOST', 'localhost'),
-        port: configService.get<number>('REDIS_PORT', 6379),
-        password: configService.get<string>('REDIS_PASSWORD'),
-        ttl: 86400000, // 24 hours default TTL
-      }),
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.get<string>('REDIS_URL');
+        let options: any = {
+          store: redisStore,
+          host: configService.get<string>('REDIS_HOST', 'localhost'),
+          port: configService.get<number>('REDIS_PORT', 6379),
+          password: configService.get<string>('REDIS_PASSWORD'),
+          ttl: 86400000, // 24 hours default TTL
+        };
+
+        if (redisUrl) {
+          try {
+            const parsed = new URL(redisUrl);
+            options = {
+              ...options,
+              host: parsed.hostname,
+              port: parseInt(parsed.port, 10) || 6379,
+              password: parsed.password || undefined,
+            };
+          } catch (e) {
+            // Fallback
+          }
+        }
+
+        return options;
+      },
       inject: [ConfigService],
     }),
   ],
