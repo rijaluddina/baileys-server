@@ -49,6 +49,13 @@ export class ApiKeyService {
     });
   }
 
+  async activateKey(id: string): Promise<void> {
+    await this.prisma.apiKey.update({
+      where: { id },
+      data: { isActive: true },
+    });
+  }
+
   validateKey(key: string): boolean {
     if (!key || typeof key !== 'string') {
       return false;

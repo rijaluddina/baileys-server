@@ -18,10 +18,10 @@ export class CapabilityService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async getCapabilitiesForSession(sessionId: string): Promise<Capability[]> {
+  async getCapabilitiesForSession(sessionId: string): Promise<string[]> {
     const cached = this.sessionCapabilities.get(sessionId);
     if (cached) {
-      return cached.capabilities;
+      return cached.capabilities as unknown as string[];
     }
 
     const session = await this.prisma.session.findUnique({
@@ -32,29 +32,23 @@ export class CapabilityService {
       throw new NotFoundException(`Session "${sessionId}" not found`);
     }
 
-    const capabilities = [...DEFAULT_CAPABILITIES_PER_SESSION_TYPE[SessionType.STANDARD]];
+    const capabilities = [...DEFAULT_CAPABILITIES_PER_SESSION_TYPE[SessionType.STANDARD]] as string[];
 
     const sessionCaps: SessionCapabilities = {
       sessionId,
-      capabilities,
+      capabilities: capabilities as Capability[],
     };
 
     this.sessionCapabilities.set(sessionId, sessionCaps);
     return capabilities;
   }
 
-  async hasCapability(
-    sessionId: string,
-    capability: Capability,
-  ): Promise<boolean> {
+  async hasCapability(sessionId: string, capability: string): Promise<boolean> {
     const capabilities = await this.getCapabilitiesForSession(sessionId);
-    return capabilities.includes(capability);
+    return capabilities.some(c => c === capability || c === capability.toUpperCase());
   }
 
-  async enableCapability(
-    sessionId: string,
-    capability: Capability,
-  ): Promise<Capability[]> {
+  async enableCapability(sessionId: string, capability: string): Promise<string[]> {
     await this.prisma.session.findUnique({
       where: { id: sessionId },
     });
@@ -65,24 +59,23 @@ export class CapabilityService {
     }
 
     const caps = this.sessionCapabilities.get(sessionId)!;
-    if (!caps.capabilities.includes(capability)) {
-      caps.capabilities.push(capability);
+    const cap = capability as Capability;
+    if (!caps.capabilities.includes(cap)) {
+      caps.capabilities.push(cap);
     }
 
-    return caps.capabilities;
+    return caps.capabilities as unknown as string[];
   }
 
-  async disableCapability(
-    sessionId: string,
-    capability: Capability,
-  ): Promise<Capability[]> {
+  async disableCapability(sessionId: string, capability: string): Promise<string[]> {
     const caps = this.sessionCapabilities.get(sessionId);
     if (!caps) {
       throw new NotFoundException(`Session "${sessionId}" not found`);
     }
 
-    caps.capabilities = caps.capabilities.filter((c) => c !== capability);
-    return caps.capabilities;
+    const cap = capability as Capability;
+    caps.capabilities = caps.capabilities.filter((c) => c !== cap);
+    return caps.capabilities as unknown as string[];
   }
 
   clearCache(sessionId?: string): void {

@@ -4,10 +4,12 @@ import { AuthService } from './auth.service.js';
 import { ApiKeyService } from './api-key.service.js';
 import { AuthGuard } from './guards/auth.guard.js';
 import { ApiKeyStrategy } from './strategies/api-key.strategy.js';
+import { AuthController } from './auth.controller.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 
 @Module({
   imports: [PrismaModule],
+  controllers: [AuthController],
   providers: [
     AuthService,
     ApiKeyService,
