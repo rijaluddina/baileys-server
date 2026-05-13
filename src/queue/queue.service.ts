@@ -171,4 +171,35 @@ export class QueueService implements OnModuleDestroy {
 
     this.logger.log('Scheduled daily message cleanup job (3:00 AM)');
   }
+
+  async getQueueMetrics() {
+    const getCounts = async (queue: Queue) => {
+      const [waiting, active, completed, failed] = await Promise.all([
+        queue.getWaitingCount(),
+        queue.getActiveCount(),
+        queue.getCompletedCount(),
+        queue.getFailedCount(),
+      ]);
+      return { waiting, active, completed, failed };
+    };
+
+    const [messageStore, contactSync, chatSync, historySync, webhookDelivery, messageCleanup] =
+      await Promise.all([
+        getCounts(this.messageStoreQueue),
+        getCounts(this.contactSyncQueue),
+        getCounts(this.chatSyncQueue),
+        getCounts(this.historySyncQueue),
+        getCounts(this.webhookDeliveryQueue),
+        getCounts(this.messageCleanupQueue),
+      ]);
+
+    return {
+      messageStore,
+      contactSync,
+      chatSync,
+      historySync,
+      webhookDelivery,
+      messageCleanup,
+    };
+  }
 }
