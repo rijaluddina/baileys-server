@@ -5,6 +5,7 @@ import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ApiKeyGuard } from './common/guards/api-key.guard.js';
 import { SessionThrottlerGuard } from './common/guards/session-throttler.guard.js';
+import { AuthModule } from './auth/auth.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { QueueModule } from './queue/queue.module.js';
 import { SessionModule } from './session/session.module.js';
@@ -33,6 +34,7 @@ import { BaileysExceptionFilter } from './common/filters/baileys-exception.filte
     ]),
     EventEmitterModule.forRoot({ wildcard: true }),
     PrismaModule,
+    AuthModule,
     QueueModule,
     SessionModule,
     MessagingModule,
