@@ -7,6 +7,7 @@ import {
 import { PrismaClient } from '../generated/prisma/client/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
+import { PrismaTenantMiddleware } from './prisma-tenant.middleware.js';
 
 @Injectable()
 export class PrismaService
@@ -15,6 +16,7 @@ export class PrismaService
 {
   private readonly logger = new Logger(PrismaService.name);
   private pool: pg.Pool;
+  private tenantMiddleware: PrismaTenantMiddleware;
 
   constructor() {
     const connectionString =
@@ -25,9 +27,13 @@ export class PrismaService
 
     super({ adapter });
     this.pool = pool;
+    this.tenantMiddleware = new PrismaTenantMiddleware();
   }
 
   async onModuleInit() {
+    (this as any).use(async (params, next) => {
+      return this.tenantMiddleware.execute(params, next);
+    });
     await this.$connect();
     this.logger.log('PostgreSQL connected via Prisma');
   }
