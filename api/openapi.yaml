@@ -1,0 +1,653 @@
+openapi: 3.0.3
+info:
+  title: Baileys WhatsApp API
+  description: |
+    Comprehensive REST API for WhatsApp using Baileys library.
+
+    ## Features
+    - Multi-session management (QR code & pairing code)
+    - Full messaging: text, media, contacts, location, polls, buttons, lists
+    - Group management: create, modify, participants, invite codes
+    - Chat operations: archive, pin, mute, delete
+    - Contact management: check numbers, profiles, block/unblock
+    - Presence: composing, recording, available, unavailable
+    - Labels: assign/remove from chats and messages
+    - Privacy settings management
+    - Newsletter/Channel management
+    - Webhook delivery with HMAC signing
+    - WebSocket for real-time events
+
+    ## Authentication
+    All endpoints require `x-api-key` header.
+  version: 1.0.0
+  contact:
+    name: Baileys API Support
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+
+security:
+  - x-api-key: []
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: baileys-server
+
+  /tenants:
+    get:
+      tags: [Tenant]
+      operationId: listTenants
+      responses:
+        '200':
+          description: List of tenants
+    post:
+      tags: [Tenant]
+      operationId: createTenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                maxSessions:
+                  type: number
+      responses:
+        '201':
+          description: Tenant created
+
+  /tenants/{id}:
+    get:
+      tags: [Tenant]
+      operationId: getTenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant details
+    patch:
+      tags: [Tenant]
+      operationId: updateTenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Tenant updated
+    delete:
+      tags: [Tenant]
+      operationId: deleteTenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant deleted
+
+  /auth/keys:
+    get:
+      tags: [Auth]
+      operationId: listApiKeys
+      summary: List all API keys for current tenant
+      responses:
+        '200':
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiKey'
+
+  /auth/keys/rotate/{id}:
+    post:
+      tags: [Auth]
+      operationId: rotateApiKey
+      summary: Rotate an API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: New key generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    type: string
+
+  /auth/keys/deactivate/{id}:
+    post:
+      tags: [Auth]
+      operationId: deactivateApiKey
+      summary: Deactivate an API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Key deactivated
+
+  /auth/keys/activate/{id}:
+    post:
+      tags: [Auth]
+      operationId: activateApiKey
+      summary: Activate a deactivated API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Key activated
+
+  /capabilities/{sessionId}:
+    get:
+      tags: [Capabilities]
+      operationId: getCapabilities
+      summary: Get capabilities for a session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of capabilities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /capabilities/{sessionId}/{capabilityName}:
+    get:
+      tags: [Capabilities]
+      operationId: hasCapability
+      summary: Check if session has a capability
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: capabilityName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Capability check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hasCapability:
+                    type: boolean
+    post:
+      tags: [Capabilities]
+      operationId: enableCapability
+      summary: Enable a capability for a session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: capabilityName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Capability enabled
+    delete:
+      tags: [Capabilities]
+      operationId: disableCapability
+      summary: Disable a capability for a session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: capabilityName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Capability disabled
+
+  /admin/tenants:
+    get:
+      tags: [Admin]
+      operationId: getAllTenants
+      summary: Get all tenants (admin)
+      responses:
+        '200':
+          description: List of all tenants
+
+  /admin/sessions:
+    get:
+      tags: [Admin]
+      operationId: getAllSessions
+      summary: Get all sessions (admin)
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of all sessions
+
+  /admin/metrics:
+    get:
+      tags: [Admin]
+      operationId: getSystemMetrics
+      summary: Get system metrics
+      responses:
+        '200':
+          description: System metrics
+
+  /sessions:
+    get:
+      tags: [Sessions]
+      operationId: listSessions
+      responses:
+        '200':
+          description: List of sessions
+    post:
+      tags: [Sessions]
+      operationId: createSession
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Session created
+
+  /sessions/{sessionId}:
+    get:
+      tags: [Sessions]
+      operationId: getSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session details
+    delete:
+      tags: [Sessions]
+      operationId: deleteSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session deleted
+
+  /sessions/{sessionId}/connect:
+    post:
+      tags: [Sessions]
+      operationId: connectSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: QR code generated
+
+  /sessions/{sessionId}/disconnect:
+    post:
+      tags: [Sessions]
+      operationId: disconnectSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session disconnected
+
+  /sessions/{sessionId}/reconnect:
+    post:
+      tags: [Sessions]
+      operationId: reconnectSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session reconnecting
+
+  /sessions/{sessionId}/messages:
+    get:
+      tags: [Messaging]
+      operationId: getMessages
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Message history
+    post:
+      tags: [Messaging]
+      operationId: sendMessage
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                to:
+                  type: string
+                content:
+                  type: object
+      responses:
+        '201':
+          description: Message sent
+
+  /sessions/{sessionId}/groups:
+    get:
+      tags: [Groups]
+      operationId: listGroups
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of groups
+    post:
+      tags: [Groups]
+      operationId: createGroup
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Group created
+
+  /sessions/{sessionId}/chats:
+    get:
+      tags: [Chats]
+      operationId: listChats
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of chats
+
+  /sessions/{sessionId}/contacts:
+    get:
+      tags: [Contacts]
+      operationId: listContacts
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of contacts
+
+  /sessions/{sessionId}/webhooks:
+    get:
+      tags: [Webhooks]
+      operationId: listWebhooks
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of webhooks
+    post:
+      tags: [Webhooks]
+      operationId: createWebhook
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                events:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Webhook created
+
+  /sessions/{sessionId}/media/upload/init:
+    post:
+      tags: [Media]
+      operationId: initUpload
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filename:
+                  type: string
+                mimeType:
+                  type: string
+                size:
+                  type: number
+      responses:
+        '200':
+          description: Upload initiated
+
+  /sessions/{sessionId}/media/upload/{id}/complete:
+    post:
+      tags: [Media]
+      operationId: completeUpload
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Upload completed
+
+components:
+  securitySchemes:
+    x-api-key:
+      type: apiKey
+      name: x-api-key
+      in: header
+
+  schemas:
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        webhookUrl:
+          type: string
+          nullable: true
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        to:
+          type: string
+        from:
+          type: string
+        content:
+          type: object
+        timestamp:
+          type: number
+
+tags:
+  - name: Health
+    description: Service health endpoints
+  - name: Tenant
+    description: Tenant management
+  - name: Auth
+    description: API key management
+  - name: Capabilities
+    description: Session capability management
+  - name: Admin
+    description: Platform administration
+  - name: Sessions
+    description: WhatsApp session management
+  - name: Messaging
+    description: Send and receive messages
+  - name: Groups
+    description: Group management
+  - name: Chats
+    description: Chat operations
+  - name: Contacts
+    description: Contact management
+  - name: Media
+    description: Media upload
+  - name: Webhooks
+    description: Webhook configuration
