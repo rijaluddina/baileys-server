@@ -4,7 +4,9 @@ import { PrismaService } from '../prisma/prisma.service.js';
 
 describe('ApiKeyService', () => {
   let service: ApiKeyService;
-  let mockPrisma: { apiKey: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock } };
+  let mockPrisma: {
+    apiKey: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
+  };
 
   beforeEach(async () => {
     mockPrisma = {
@@ -78,7 +80,7 @@ describe('ApiKeyService', () => {
 
   describe('rotateKey', () => {
     it('should deactivate old key and create new key', async () => {
-      (mockPrisma.apiKey.findUnique as jest.Mock).mockResolvedValueOnce({
+      mockPrisma.apiKey.findUnique.mockResolvedValueOnce({
         id: 'key-1',
         tenantId: 'tenant-123',
         name: 'test-key',
@@ -102,8 +104,10 @@ describe('ApiKeyService', () => {
     });
 
     it('should throw error if key not found', async () => {
-      (mockPrisma.apiKey.findUnique as jest.Mock).mockResolvedValueOnce(null);
-      await expect(service.rotateKey('non-existent')).rejects.toThrow('API key not found');
+      mockPrisma.apiKey.findUnique.mockResolvedValueOnce(null);
+      await expect(service.rotateKey('non-existent')).rejects.toThrow(
+        'API key not found',
+      );
     });
   });
 

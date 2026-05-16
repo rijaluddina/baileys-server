@@ -21,7 +21,7 @@ export class CapabilityService {
   async getCapabilitiesForSession(sessionId: string): Promise<string[]> {
     const cached = this.sessionCapabilities.get(sessionId);
     if (cached) {
-      return cached.capabilities as unknown as string[];
+      return cached.capabilities;
     }
 
     const session = await this.prisma.session.findUnique({
@@ -32,7 +32,9 @@ export class CapabilityService {
       throw new NotFoundException(`Session "${sessionId}" not found`);
     }
 
-    const capabilities = [...DEFAULT_CAPABILITIES_PER_SESSION_TYPE[SessionType.STANDARD]] as string[];
+    const capabilities = [
+      ...DEFAULT_CAPABILITIES_PER_SESSION_TYPE[SessionType.STANDARD],
+    ] as string[];
 
     const sessionCaps: SessionCapabilities = {
       sessionId,
@@ -45,16 +47,23 @@ export class CapabilityService {
 
   async hasCapability(sessionId: string, capability: string): Promise<boolean> {
     const capabilities = await this.getCapabilitiesForSession(sessionId);
-    return capabilities.some(c => c === capability || c === capability.toUpperCase());
+    return capabilities.some(
+      (c) => c === capability || c === capability.toUpperCase(),
+    );
   }
 
-  async enableCapability(sessionId: string, capability: string): Promise<string[]> {
+  async enableCapability(
+    sessionId: string,
+    capability: string,
+  ): Promise<string[]> {
     await this.prisma.session.findUnique({
       where: { id: sessionId },
     });
 
     if (!this.sessionCapabilities.has(sessionId)) {
-      const capabilities = [...DEFAULT_CAPABILITIES_PER_SESSION_TYPE[SessionType.STANDARD]];
+      const capabilities = [
+        ...DEFAULT_CAPABILITIES_PER_SESSION_TYPE[SessionType.STANDARD],
+      ];
       this.sessionCapabilities.set(sessionId, { sessionId, capabilities });
     }
 
@@ -64,10 +73,13 @@ export class CapabilityService {
       caps.capabilities.push(cap);
     }
 
-    return caps.capabilities as unknown as string[];
+    return caps.capabilities;
   }
 
-  async disableCapability(sessionId: string, capability: string): Promise<string[]> {
+  async disableCapability(
+    sessionId: string,
+    capability: string,
+  ): Promise<string[]> {
     const caps = this.sessionCapabilities.get(sessionId);
     if (!caps) {
       throw new NotFoundException(`Session "${sessionId}" not found`);
@@ -75,7 +87,7 @@ export class CapabilityService {
 
     const cap = capability as Capability;
     caps.capabilities = caps.capabilities.filter((c) => c !== cap);
-    return caps.capabilities as unknown as string[];
+    return caps.capabilities;
   }
 
   clearCache(sessionId?: string): void {

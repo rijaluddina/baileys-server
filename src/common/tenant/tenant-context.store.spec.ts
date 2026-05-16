@@ -36,7 +36,7 @@ describe('TenantContextStore', () => {
       const ctx1: TenantContext = { tenantId: 'tenant-1' };
       const ctx2: TenantContext = { tenantId: 'tenant-2' };
 
-      let results: string[] = [];
+      const results: string[] = [];
 
       const promise1 = new Promise<void>((resolve) => {
         TenantContextStore.set(ctx1);

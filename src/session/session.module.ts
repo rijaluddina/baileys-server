@@ -7,7 +7,12 @@ import { WaRateLimiterService } from './wa-rate-limiter.service.js';
 
 @Global()
 @Module({
-  providers: [SessionService, SessionDataService, SessionGateway, WaRateLimiterService],
+  providers: [
+    SessionService,
+    SessionDataService,
+    SessionGateway,
+    WaRateLimiterService,
+  ],
   controllers: [SessionController],
   exports: [SessionService, SessionDataService, WaRateLimiterService],
 })

@@ -70,7 +70,8 @@ export class ApiKeyService {
 
   private generateSecureKey(): string {
     const prefix = 'wa_live_';
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const chars =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';
     const randomValues = new Uint32Array(32);
     crypto.getRandomValues(randomValues);

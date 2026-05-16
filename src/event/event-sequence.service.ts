@@ -48,7 +48,9 @@ export class EventSequenceService {
 
   async release(sessionId: string): Promise<void> {
     this.sequences.delete(sessionId);
-    await this.redis.del(`${EventSequenceService.REDIS_KEY_PREFIX}${sessionId}`);
+    await this.redis.del(
+      `${EventSequenceService.REDIS_KEY_PREFIX}${sessionId}`,
+    );
     this.logger.debug(`Released sequence for session ${sessionId}`);
   }
 

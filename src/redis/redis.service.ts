@@ -24,7 +24,7 @@ class RedisServiceClass {
     const url =
       this.configService.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
     const Redis = require('ioredis');
-    
+
     const options: any = {
       lazyConnect: false,
       retryStrategy: (times: number) => Math.min(times * 100, 3000),

@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateTenantDto } from './dto/create-tenant.dto.js';
 import { UpdateTenantDto } from './dto/update-tenant.dto.js';
@@ -50,7 +55,9 @@ export class TenantService {
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.webhookUrl !== undefined && { webhookUrl: data.webhookUrl }),
-        ...(data.maxSessions !== undefined && { maxSessions: data.maxSessions }),
+        ...(data.maxSessions !== undefined && {
+          maxSessions: data.maxSessions,
+        }),
         ...(data.active !== undefined && { active: data.active }),
       },
     });

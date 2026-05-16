@@ -20,6 +20,7 @@ import { RedisCacheModule } from './common/redis-cache.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { EventModule } from './event/event.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { MediaModule } from './media/media.module.js';
 import { BaileysExceptionFilter } from './common/filters/baileys-exception.filter.js';
 
 @Module({
@@ -47,6 +48,7 @@ import { BaileysExceptionFilter } from './common/filters/baileys-exception.filte
     WebhookModule,
     EventModule,
     AdminModule,
+    MediaModule,
   ],
   providers: [
     {

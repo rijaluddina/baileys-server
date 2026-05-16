@@ -1,4 +1,11 @@
-import { Controller, Get, Post, Delete, Param, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  NotFoundException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiSecurity, ApiParam } from '@nestjs/swagger';
 import { ApiKeyService } from './api-key.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';

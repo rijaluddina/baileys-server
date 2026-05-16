@@ -37,12 +37,42 @@ export interface SystemMetrics {
 }
 
 export interface QueueMetrics {
-  messageStore: { waiting: number; active: number; completed: number; failed: number };
-  contactSync: { waiting: number; active: number; completed: number; failed: number };
-  chatSync: { waiting: number; active: number; completed: number; failed: number };
-  historySync: { waiting: number; active: number; completed: number; failed: number };
-  webhookDelivery: { waiting: number; active: number; completed: number; failed: number };
-  messageCleanup: { waiting: number; active: number; completed: number; failed: number };
+  messageStore: {
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+  };
+  contactSync: {
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+  };
+  chatSync: {
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+  };
+  historySync: {
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+  };
+  webhookDelivery: {
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+  };
+  messageCleanup: {
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+  };
 }
 
 @Injectable()

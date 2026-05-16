@@ -8,9 +8,22 @@ import {
   Inject,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiSecurity, ApiParam, ApiConsumes } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiSecurity,
+  ApiParam,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { MediaService } from './media.service.js';
-import { InitUploadDto, CompleteUploadDto, StreamUploadDto, InitUploadResponseDto, CompleteUploadResponseDto, StreamUploadResponseDto } from './dto/media.dto.js';
+import {
+  InitUploadDto,
+  CompleteUploadDto,
+  StreamUploadDto,
+  InitUploadResponseDto,
+  CompleteUploadResponseDto,
+  StreamUploadResponseDto,
+} from './dto/media.dto.js';
 
 @ApiTags('Media')
 @ApiSecurity('x-api-key')
@@ -39,7 +52,13 @@ export class MediaController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
   streamUpload(
-    @UploadedFile() file: { originalname: string; mimetype: string; size: number; buffer?: Buffer },
+    @UploadedFile()
+    file: {
+      originalname: string;
+      mimetype: string;
+      size: number;
+      buffer?: Buffer;
+    },
     @Body() dto: StreamUploadDto,
   ): Promise<StreamUploadResponseDto> {
     return this.mediaService.streamUpload(file, dto.sessionId);

@@ -72,7 +72,7 @@ export class PrismaTenantMiddleware {
       case 'groupBy': {
         if (modifiedArgs.where) {
           modifiedArgs.where = {
-            ...(modifiedArgs.where as object),
+            ...modifiedArgs.where,
             tenantId,
           };
         } else {
@@ -92,13 +92,13 @@ export class PrismaTenantMiddleware {
 
       case 'createMany': {
         if (modifiedArgs.data && Array.isArray(modifiedArgs.data)) {
-          modifiedArgs.data = (modifiedArgs.data as Record<string, unknown>[]).map(
-            (item) => {
-              const sanitized = { ...item };
-              delete sanitized.tenantId;
-              return { ...sanitized, tenantId };
-            },
-          );
+          modifiedArgs.data = (
+            modifiedArgs.data as Record<string, unknown>[]
+          ).map((item) => {
+            const sanitized = { ...item };
+            delete sanitized.tenantId;
+            return { ...sanitized, tenantId };
+          });
         }
         break;
       }
@@ -106,7 +106,7 @@ export class PrismaTenantMiddleware {
       case 'update': {
         if (modifiedArgs.where) {
           modifiedArgs.where = {
-            ...(modifiedArgs.where as object),
+            ...modifiedArgs.where,
             tenantId,
           };
         } else {
@@ -124,7 +124,7 @@ export class PrismaTenantMiddleware {
       case 'updateMany': {
         if (modifiedArgs.where) {
           modifiedArgs.where = {
-            ...(modifiedArgs.where as object),
+            ...modifiedArgs.where,
             tenantId,
           };
         } else {
@@ -136,7 +136,7 @@ export class PrismaTenantMiddleware {
       case 'delete': {
         if (modifiedArgs.where) {
           modifiedArgs.where = {
-            ...(modifiedArgs.where as object),
+            ...modifiedArgs.where,
             tenantId,
           };
         } else {
@@ -148,7 +148,7 @@ export class PrismaTenantMiddleware {
       case 'deleteMany': {
         if (modifiedArgs.where) {
           modifiedArgs.where = {
-            ...(modifiedArgs.where as object),
+            ...modifiedArgs.where,
             tenantId,
           };
         } else {
@@ -160,7 +160,7 @@ export class PrismaTenantMiddleware {
       case 'upsert': {
         if (modifiedArgs.where) {
           modifiedArgs.where = {
-            ...(modifiedArgs.where as object),
+            ...modifiedArgs.where,
             tenantId,
           };
         } else {

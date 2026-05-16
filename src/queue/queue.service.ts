@@ -183,15 +183,21 @@ export class QueueService implements OnModuleDestroy {
       return { waiting, active, completed, failed };
     };
 
-    const [messageStore, contactSync, chatSync, historySync, webhookDelivery, messageCleanup] =
-      await Promise.all([
-        getCounts(this.messageStoreQueue),
-        getCounts(this.contactSyncQueue),
-        getCounts(this.chatSyncQueue),
-        getCounts(this.historySyncQueue),
-        getCounts(this.webhookDeliveryQueue),
-        getCounts(this.messageCleanupQueue),
-      ]);
+    const [
+      messageStore,
+      contactSync,
+      chatSync,
+      historySync,
+      webhookDelivery,
+      messageCleanup,
+    ] = await Promise.all([
+      getCounts(this.messageStoreQueue),
+      getCounts(this.contactSyncQueue),
+      getCounts(this.chatSyncQueue),
+      getCounts(this.historySyncQueue),
+      getCounts(this.webhookDeliveryQueue),
+      getCounts(this.messageCleanupQueue),
+    ]);
 
     return {
       messageStore,

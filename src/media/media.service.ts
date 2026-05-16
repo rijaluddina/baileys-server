@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { S3Service } from './s3.service.js';
 import { randomUUID } from 'crypto';
-import { InitUploadDto, InitUploadResponseDto, CompleteUploadResponseDto, StreamUploadResponseDto } from './dto/media.dto.js';
+import {
+  InitUploadDto,
+  InitUploadResponseDto,
+  CompleteUploadResponseDto,
+  StreamUploadResponseDto,
+} from './dto/media.dto.js';
 
 interface S3Config {
   enabled: boolean;
@@ -74,7 +79,12 @@ export class MediaService {
   }
 
   async streamUpload(
-    file: { originalname: string; mimetype: string; size: number; buffer?: Buffer },
+    file: {
+      originalname: string;
+      mimetype: string;
+      size: number;
+      buffer?: Buffer;
+    },
     metadata?: string,
   ): Promise<StreamUploadResponseDto> {
     const mediaKey = randomUUID();

@@ -147,9 +147,9 @@ describe('TenantService', () => {
     it('should throw NotFoundException when updating non-existent tenant', async () => {
       mockPrisma.tenant.findUnique.mockResolvedValue(null);
 
-      await expect(service.update('nonexistent', { name: 'Test' })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update('nonexistent', { name: 'Test' }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

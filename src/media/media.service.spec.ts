@@ -20,7 +20,9 @@ describe('MediaService', () => {
   let s3Service: jest.Mocked<S3Service>;
 
   const mockS3Service = {
-    generatePresignedUploadUrl: jest.fn().mockResolvedValue('https://signed.url'),
+    generatePresignedUploadUrl: jest
+      .fn()
+      .mockResolvedValue('https://signed.url'),
     getObjectUrl: jest.fn().mockResolvedValue('https://media.url'),
     deleteObject: jest.fn(),
   };

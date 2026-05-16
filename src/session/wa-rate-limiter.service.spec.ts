@@ -92,7 +92,8 @@ describe('WaRateLimiterService', () => {
     });
 
     it('should enforce sustained limit', async () => {
-      mockClient.zcount = jest.fn()
+      mockClient.zcount = jest
+        .fn()
         .mockResolvedValueOnce(5)
         .mockResolvedValueOnce(60);
 

@@ -13,11 +13,14 @@ import {
 export class RpcClientService {
   private readonly logger = new Logger(RpcClientService.name);
   private readonly circuitBreakers = new Map<string, CircuitBreakerState>();
-  private readonly pendingRequests = new Map<string, {
-    resolve: (value: RpcResult<unknown>) => void;
-    reject: (reason: Error) => void;
-    timeout: NodeJS.Timeout;
-  }>();
+  private readonly pendingRequests = new Map<
+    string,
+    {
+      resolve: (value: RpcResult<unknown>) => void;
+      reject: (reason: Error) => void;
+      timeout: NodeJS.Timeout;
+    }
+  >();
 
   constructor(private readonly redisService: RedisService) {
     this.initializeSubscriber();
@@ -187,7 +190,9 @@ export class RpcClientService {
     if (!cb) return;
 
     cb.state = 'open';
-    this.logger.warn(`Circuit breaker opened for worker ${workerId} after ${cb.failures} failures`);
+    this.logger.warn(
+      `Circuit breaker opened for worker ${workerId} after ${cb.failures} failures`,
+    );
   }
 
   private transitionToHalfOpen(workerId: string): void {

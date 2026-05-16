@@ -30,7 +30,7 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -52,7 +52,7 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -80,7 +80,7 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -110,10 +110,10 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
-      const calledArgs = (next as jest.Mock).mock.calls[0][0].args;
-      expect((calledArgs as any).data.tenantId).toBe('session-123');
+      const calledArgs = next.mock.calls[0][0].args;
+      expect(calledArgs.data.tenantId).toBe('session-123');
     });
   });
 
@@ -130,7 +130,7 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -156,10 +156,10 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
-      const calledArgs = (next as jest.Mock).mock.calls[0][0].args;
-      expect((calledArgs as any).data.tenantId).toBeUndefined();
+      const calledArgs = next.mock.calls[0][0].args;
+      expect(calledArgs.data.tenantId).toBeUndefined();
     });
   });
 
@@ -175,7 +175,7 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -208,7 +208,7 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -238,7 +238,7 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -257,7 +257,7 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(params);
     });
@@ -276,11 +276,11 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
-      const calledArgs = (next as jest.Mock).mock.calls[0][0].args;
-      expect((calledArgs as any).data.tenantId).toBeUndefined();
-      expect((calledArgs as any).where.tenantId).toBe('session-123');
+      const calledArgs = next.mock.calls[0][0].args;
+      expect(calledArgs.data.tenantId).toBeUndefined();
+      expect(calledArgs.where.tenantId).toBe('session-123');
     });
   });
 
@@ -293,7 +293,7 @@ describe('PrismaTenantMiddleware', () => {
       });
       const next = createNextMock();
 
-      await middleware.execute(params as any, next);
+      await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(params);
     });

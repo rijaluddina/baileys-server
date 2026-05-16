@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsMimeType, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsString,
+  IsMimeType,
+  IsNumber,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
 export class InitUploadDto {
   @ApiProperty({ description: 'Filename' })

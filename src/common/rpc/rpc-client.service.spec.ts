@@ -58,7 +58,8 @@ describe('RpcClientService', () => {
       }
 
       const state = service.getCircuitState('worker1');
-      (state as any).lastFailureTime = Date.now() - CB_CONFIG.OPEN_TIMEOUT_MS - 1000;
+      (state as any).lastFailureTime =
+        Date.now() - CB_CONFIG.OPEN_TIMEOUT_MS - 1000;
       service.checkCircuit('worker1');
 
       service.recordSuccess('worker1');
@@ -85,7 +86,8 @@ describe('RpcClientService', () => {
       }
 
       const state = service.getCircuitState('worker1');
-      (state as any).lastFailureTime = Date.now() - CB_CONFIG.OPEN_TIMEOUT_MS - 1000;
+      (state as any).lastFailureTime =
+        Date.now() - CB_CONFIG.OPEN_TIMEOUT_MS - 1000;
       service.checkCircuit('worker1');
 
       service.recordFailure('worker1');
@@ -112,14 +114,21 @@ describe('RpcClientService', () => {
         service.recordFailure('worker1');
       }
 
-      const result = await service.call('worker1', 'testAction', { data: 'test' });
+      const result = await service.call('worker1', 'testAction', {
+        data: 'test',
+      });
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Circuit breaker open');
     });
 
     it('should publish message to Redis', async () => {
-      await service.call('worker1', 'testAction', { data: 'test' }, { timeout: 100 });
+      await service.call(
+        'worker1',
+        'testAction',
+        { data: 'test' },
+        { timeout: 100 },
+      );
 
       expect(mockRedis.publish).toHaveBeenCalledWith(
         'rpc:requests:worker1',

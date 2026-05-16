@@ -156,7 +156,8 @@ export class WaRateLimiterService {
     timestamp: number,
   ): Promise<void> {
     const key = `${this.keyPrefix}ratelimit:${sessionId}:${window}`;
-    const windowMs = window === 'burst' ? this.burstWindowMs : this.sustainedWindowMs;
+    const windowMs =
+      window === 'burst' ? this.burstWindowMs : this.sustainedWindowMs;
 
     try {
       const client = this.redisService.getClient();

@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { CapabilityService } from './capability.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { Capability, SessionType, DEFAULT_CAPABILITIES_PER_SESSION_TYPE } from './capability.definitions.js';
+import {
+  Capability,
+  SessionType,
+  DEFAULT_CAPABILITIES_PER_SESSION_TYPE,
+} from './capability.definitions.js';
 
 describe('CapabilityService', () => {
   let service: CapabilityService;
@@ -39,15 +43,17 @@ describe('CapabilityService', () => {
 
       const capabilities = await service.getCapabilitiesForSession('session-1');
 
-      expect(capabilities).toEqual(DEFAULT_CAPABILITIES_PER_SESSION_TYPE[SessionType.STANDARD]);
+      expect(capabilities).toEqual(
+        DEFAULT_CAPABILITIES_PER_SESSION_TYPE[SessionType.STANDARD],
+      );
     });
 
     it('should throw NotFoundException for non-existent session', async () => {
       prisma.session.findUnique.mockResolvedValue(null);
 
-      await expect(service.getCapabilitiesForSession('non-existent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.getCapabilitiesForSession('non-existent'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should return cached capabilities on subsequent calls', async () => {
@@ -65,7 +71,10 @@ describe('CapabilityService', () => {
     it('should return true when session has the capability', async () => {
       prisma.session.findUnique.mockResolvedValue({ id: 'session-1' });
 
-      const result = await service.hasCapability('session-1', Capability.SEND_MESSAGE);
+      const result = await service.hasCapability(
+        'session-1',
+        Capability.SEND_MESSAGE,
+      );
 
       expect(result).toBe(true);
     });
@@ -73,7 +82,10 @@ describe('CapabilityService', () => {
     it('should return false when session does not have the capability', async () => {
       prisma.session.findUnique.mockResolvedValue({ id: 'session-1' });
 
-      const result = await service.hasCapability('session-1', Capability.MAKE_CALL);
+      const result = await service.hasCapability(
+        'session-1',
+        Capability.MAKE_CALL,
+      );
 
       expect(result).toBe(false);
     });
@@ -83,7 +95,10 @@ describe('CapabilityService', () => {
     it('should add capability to session', async () => {
       prisma.session.findUnique.mockResolvedValue({ id: 'session-1' });
 
-      const capabilities = await service.enableCapability('session-1', Capability.CREATE_GROUP);
+      const capabilities = await service.enableCapability(
+        'session-1',
+        Capability.CREATE_GROUP,
+      );
 
       expect(capabilities).toContain(Capability.CREATE_GROUP);
     });
@@ -104,7 +119,10 @@ describe('CapabilityService', () => {
       prisma.session.findUnique.mockResolvedValue({ id: 'session-1' });
 
       await service.enableCapability('session-1', Capability.SEND_MESSAGE);
-      const capabilities = await service.disableCapability('session-1', Capability.SEND_MESSAGE);
+      const capabilities = await service.disableCapability(
+        'session-1',
+        Capability.SEND_MESSAGE,
+      );
 
       expect(capabilities).not.toContain(Capability.SEND_MESSAGE);
     });
