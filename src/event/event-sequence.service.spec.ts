@@ -1,6 +1,3 @@
-let mockPrisma: any;
-let mockRedis: any;
-
 jest.mock('../prisma/prisma.service.js', () => ({
   PrismaService: jest.fn().mockImplementation(() => mockPrisma),
 }));
@@ -13,6 +10,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventSequenceService } from './event-sequence.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { RedisService } from '../redis/redis.service.js';
+
+type MockPrisma = {
+  sessionEvent: {
+    findFirst: jest.Mock;
+  };
+};
+
+type MockRedis = {
+  get: jest.Mock;
+  set: jest.Mock;
+  del: jest.Mock;
+};
+
+let mockPrisma: MockPrisma;
+let mockRedis: MockRedis;
 
 describe('EventSequenceService', () => {
   let service: EventSequenceService;
@@ -133,8 +145,8 @@ describe('EventSequenceService', () => {
   });
 
   describe('getCurrentSequence', () => {
-    it('should return undefined for uninitialized session', async () => {
-      const result = await service.getCurrentSequence(sessionId);
+    it('should return undefined for uninitialized session', () => {
+      const result = service.getCurrentSequence(sessionId);
       expect(result).toBeUndefined();
     });
 
@@ -145,7 +157,7 @@ describe('EventSequenceService', () => {
       mockRedis.set.mockResolvedValue();
 
       await service.initializeForSession(sessionId);
-      const result = await service.getCurrentSequence(sessionId);
+      const result = service.getCurrentSequence(sessionId);
 
       expect(result).toBe(7n);
     });

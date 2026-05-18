@@ -1,17 +1,33 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Job } from 'bullmq';
 import { ChatSyncProcessor } from './chat-sync.processor.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+
+type ChatSyncJob = {
+  sessionId: string;
+  chats: Array<{
+    id: string;
+    name?: string;
+    conversationTimestamp?: { low: number };
+  }>;
+};
+
+type MockPrisma = {
+  chat: {
+    upsert: jest.Mock;
+  };
+  $transaction: jest.Mock;
+};
 
 describe('ChatSyncProcessor', () => {
   it('syncs valid chats in a single transaction', async () => {
     const chatOperation = { model: 'chat', action: 'upsert' };
-    const prisma = {
+    const prisma: MockPrisma = {
       chat: {
         upsert: jest.fn().mockReturnValue(chatOperation),
       },
       $transaction: jest.fn().mockResolvedValue([]),
     };
-    const processor = new ChatSyncProcessor(prisma as any);
+    const processor = new ChatSyncProcessor(prisma as PrismaService);
     const job = {
       data: {
         sessionId: 'session-1',
@@ -24,7 +40,7 @@ describe('ChatSyncProcessor', () => {
           { id: '' },
         ],
       },
-    } as Job<never>;
+    } as Job<ChatSyncJob>;
 
     await processor.process(job);
 

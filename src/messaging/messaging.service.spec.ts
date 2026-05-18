@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 jest.mock('baileys', () => ({
   __esModule: true,
   default: jest.fn(),
@@ -14,6 +13,12 @@ jest.mock('../session/prisma-auth-state.js', () => ({
 }));
 
 import { MessagingService } from './messaging.service.js';
+import { SessionService } from '../session/session.service.js';
+import { SessionDataService } from '../session/session-data.service.js';
+import { QueueService } from '../queue/queue.service.js';
+
+type MockSessionService = Pick<SessionService, 'getSocket'>;
+type MockSessionDataService = Pick<SessionDataService, 'findMessage'>;
 
 describe('MessagingService', () => {
   it('awaits quoted message lookup before sending text replies', async () => {
@@ -27,17 +32,17 @@ describe('MessagingService', () => {
       },
       message: { conversation: 'quoted text' },
     };
-    const sessionService = {
+    const sessionService: MockSessionService = {
       getSocket: jest.fn().mockReturnValue(socket),
     };
-    const sessionDataService = {
+    const sessionDataService: MockSessionDataService = {
       findMessage: jest.fn().mockResolvedValue(quoted),
     };
-    const queueService = {};
+    const queueService = {} as QueueService;
     const service = new MessagingService(
-      sessionService as any,
-      sessionDataService as any,
-      queueService as any,
+      sessionService as SessionService,
+      sessionDataService as SessionDataService,
+      queueService,
     );
 
     await expect(

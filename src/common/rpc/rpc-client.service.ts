@@ -9,6 +9,23 @@ import {
   RpcResponse,
 } from './rpc.types.js';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isRpcResponse(value: unknown): value is RpcResponse {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const candidate = value as Partial<RpcResponse>;
+  return (
+    typeof candidate.correlationId === 'string' &&
+    typeof candidate.success === 'boolean' &&
+    (candidate.error === undefined || typeof candidate.error === 'string')
+  );
+}
+
 @Injectable()
 export class RpcClientService {
   private readonly logger = new Logger(RpcClientService.name);
@@ -23,7 +40,7 @@ export class RpcClientService {
   >();
 
   constructor(private readonly redisService: RedisService) {
-    this.initializeSubscriber();
+    void this.initializeSubscriber();
   }
 
   private async initializeSubscriber(): Promise<void> {
@@ -35,7 +52,12 @@ export class RpcClientService {
 
   private handleResponse(message: string): void {
     try {
-      const response: RpcResponse = JSON.parse(message);
+      const parsed: unknown = JSON.parse(message);
+      if (!isRpcResponse(parsed)) {
+        throw new Error('Invalid RPC response payload');
+      }
+
+      const response = parsed;
       const pending = this.pendingRequests.get(response.correlationId);
       if (!pending) return;
 
@@ -48,7 +70,9 @@ export class RpcClientService {
         pending.resolve({ success: false, error: response.error });
       }
     } catch (err) {
-      this.logger.error(`Failed to parse RPC response: ${err}`);
+      this.logger.error(
+        `Failed to parse RPC response: ${getErrorMessage(err)}`,
+      );
     }
   }
 
@@ -119,7 +143,7 @@ export class RpcClientService {
         .catch((err) => {
           clearTimeout(timeoutHandle);
           this.pendingRequests.delete(correlationId);
-          resolve({ success: false, error: err.message });
+          resolve({ success: false, error: getErrorMessage(err) });
         });
     });
   }

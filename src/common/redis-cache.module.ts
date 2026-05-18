@@ -10,7 +10,7 @@ import { redisStore } from 'cache-manager-ioredis-yet';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const redisUrl = configService.get<string>('REDIS_URL');
-        let options: any = {
+        let options: Record<string, unknown> = {
           store: redisStore,
           host: configService.get<string>('REDIS_HOST', 'localhost'),
           port: configService.get<number>('REDIS_PORT', 6379),
@@ -27,7 +27,7 @@ import { redisStore } from 'cache-manager-ioredis-yet';
               port: parseInt(parsed.port, 10) || 6379,
               password: parsed.password || undefined,
             };
-          } catch (e) {
+          } catch {
             // Fallback
           }
         }

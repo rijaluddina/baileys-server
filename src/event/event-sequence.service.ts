@@ -68,7 +68,7 @@ export class EventSequenceService {
     }
   }
 
-  async getCurrentSequence(sessionId: string): Promise<bigint | undefined> {
+  getCurrentSequence(sessionId: string): bigint | undefined {
     return this.sequences.get(sessionId);
   }
 

@@ -1,20 +1,35 @@
-let mockClient: any;
-
-jest.mock('../redis/redis.service.js', () => ({
-  RedisService: jest.fn().mockImplementation(() => ({
-    getClient: () => mockClient,
-  })),
-}));
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { WaRateLimiterService } from './wa-rate-limiter.service.js';
 import { RedisService } from '../redis/redis.service.js';
 
+type MockRedisClient = {
+  zcount: jest.Mock;
+  zrange: jest.Mock;
+  zadd: jest.Mock;
+  expire: jest.Mock;
+  del: jest.Mock;
+  pipeline: jest.Mock;
+};
+
+type MockPipeline = {
+  zadd: jest.Mock;
+  expire: jest.Mock;
+  exec: jest.Mock;
+};
+
+let mockClient: MockRedisClient;
+
+jest.mock('../redis/redis.service.js', () => ({
+  RedisService: jest.fn().mockImplementation(() => ({
+    getClient: () => mockClient as unknown,
+  })),
+}));
+
 describe('WaRateLimiterService', () => {
   let service: WaRateLimiterService;
   let mockConfigService: Partial<ConfigService>;
-  let mockPipeline: any;
+  let mockPipeline: MockPipeline;
 
   const sessionId = 'test-session-123';
 
@@ -33,7 +48,7 @@ describe('WaRateLimiterService', () => {
       zadd: jest.fn().mockResolvedValue(1),
       expire: jest.fn().mockResolvedValue(1),
       del: jest.fn().mockResolvedValue(1),
-      pipeline: () => mockPipeline,
+      pipeline: jest.fn().mockReturnValue(mockPipeline),
     };
 
     mockConfigService = {
@@ -53,7 +68,10 @@ describe('WaRateLimiterService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WaRateLimiterService,
-        { provide: RedisService, useValue: new (RedisService as any)() },
+        {
+          provide: RedisService,
+          useValue: new (RedisService as unknown as new () => RedisService)(),
+        },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();

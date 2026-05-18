@@ -1,8 +1,4 @@
-import {
-  PipeTransform,
-  ArgumentMetadata,
-  BadRequestException,
-} from '@nestjs/common';
+import { PipeTransform, BadRequestException } from '@nestjs/common';
 import {
   PaginationDto,
   DEFAULT_PAGINATION_LIMIT,
@@ -10,8 +6,7 @@ import {
 } from '../dto/pagination.dto.js';
 
 export class PaginationPipe implements PipeTransform<PaginationDto> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  transform(value: PaginationDto, _metadata: ArgumentMetadata): PaginationDto {
+  transform(value: PaginationDto): PaginationDto {
     const page = value.page ?? 1;
     const limit = value.limit ?? DEFAULT_PAGINATION_LIMIT;
 

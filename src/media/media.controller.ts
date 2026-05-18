@@ -5,7 +5,6 @@ import {
   Param,
   UseInterceptors,
   UploadedFile,
-  Inject,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -18,7 +17,6 @@ import {
 import { MediaService } from './media.service.js';
 import {
   InitUploadDto,
-  CompleteUploadDto,
   StreamUploadDto,
   InitUploadResponseDto,
   CompleteUploadResponseDto,
@@ -40,10 +38,7 @@ export class MediaController {
   @Post('upload/:id/complete')
   @ApiOperation({ summary: 'Complete presigned URL upload' })
   @ApiParam({ name: 'id', description: 'Upload ID from init' })
-  completeUpload(
-    @Param('id') id: string,
-    @Body() dto: CompleteUploadDto,
-  ): Promise<CompleteUploadResponseDto> {
+  completeUpload(@Param('id') id: string): CompleteUploadResponseDto {
     return this.mediaService.completeUpload(id);
   }
 

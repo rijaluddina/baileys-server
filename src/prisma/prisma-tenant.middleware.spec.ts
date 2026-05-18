@@ -1,5 +1,8 @@
 import { PrismaTenantMiddleware } from './prisma-tenant.middleware.js';
 
+type MiddlewareParams = Parameters<PrismaTenantMiddleware['execute']>[0];
+type NextMock = jest.Mock<Promise<Record<string, unknown>>, [MiddlewareParams]>;
+
 describe('PrismaTenantMiddleware', () => {
   let middleware: PrismaTenantMiddleware;
 
@@ -11,15 +14,18 @@ describe('PrismaTenantMiddleware', () => {
     model?: string;
     action?: string;
     args?: Record<string, unknown>;
-  }) => ({
+  }): MiddlewareParams => ({
     model: overrides.model || 'Message',
     action: overrides.action || 'findMany',
     args: overrides.args || {},
   });
 
-  const createNextMock = () => {
-    return jest.fn().mockResolvedValue({});
-  };
+  const createNextMock = (): NextMock =>
+    jest
+      .fn<Promise<Record<string, unknown>>, [MiddlewareParams]>()
+      .mockResolvedValue({});
+
+  const matching = <T>(val: Partial<T>): T => expect.objectContaining(val) as T;
 
   describe('findMany', () => {
     it('should inject tenantId into where clause', async () => {
@@ -33,9 +39,9 @@ describe('PrismaTenantMiddleware', () => {
       await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: expect.objectContaining({
-            where: expect.objectContaining({
+        matching<MiddlewareParams>({
+          args: matching<Record<string, unknown>>({
+            where: matching<Record<string, unknown>>({
               content: 'test',
               tenantId: 'session-123',
             }),
@@ -55,8 +61,8 @@ describe('PrismaTenantMiddleware', () => {
       await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: expect.objectContaining({
+        matching<MiddlewareParams>({
+          args: matching<Record<string, unknown>>({
             where: { tenantId: 'session-123' },
           }),
         }),
@@ -83,9 +89,9 @@ describe('PrismaTenantMiddleware', () => {
       await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: expect.objectContaining({
-            data: expect.objectContaining({
+        matching<MiddlewareParams>({
+          args: matching<Record<string, unknown>>({
+            data: matching<Record<string, unknown>>({
               content: { text: 'hello' },
               sessionId: 'session-123',
               remoteJid: 'user@test.com',
@@ -133,9 +139,9 @@ describe('PrismaTenantMiddleware', () => {
       await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: expect.objectContaining({
-            where: expect.objectContaining({
+        matching<MiddlewareParams>({
+          args: matching<Record<string, unknown>>({
+            where: matching<Record<string, unknown>>({
               id: 'msg-1',
               tenantId: 'session-123',
             }),
@@ -178,9 +184,9 @@ describe('PrismaTenantMiddleware', () => {
       await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: expect.objectContaining({
-            where: expect.objectContaining({
+        matching<MiddlewareParams>({
+          args: matching<Record<string, unknown>>({
+            where: matching<Record<string, unknown>>({
               id: 'msg-1',
               tenantId: 'session-123',
             }),
@@ -211,13 +217,13 @@ describe('PrismaTenantMiddleware', () => {
       await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: expect.objectContaining({
-            where: expect.objectContaining({
+        matching<MiddlewareParams>({
+          args: matching<Record<string, unknown>>({
+            where: matching<Record<string, unknown>>({
               id: 'msg-1',
               tenantId: 'session-123',
             }),
-            create: expect.objectContaining({
+            create: matching<Record<string, unknown>>({
               content: { text: 'created' },
               sessionId: 'session-123',
               remoteJid: 'user@test.com',
@@ -241,8 +247,8 @@ describe('PrismaTenantMiddleware', () => {
       await middleware.execute(params, next);
 
       expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          args: expect.objectContaining({
+        matching<MiddlewareParams>({
+          args: matching<Record<string, unknown>>({
             where: { id: 'session-123' },
           }),
         }),

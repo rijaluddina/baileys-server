@@ -110,7 +110,9 @@ describe('CapabilityService', () => {
       await service.enableCapability('session-1', Capability.SEND_MESSAGE);
 
       const caps = await service.getCapabilitiesForSession('session-1');
-      expect(caps.filter((c) => c === Capability.SEND_MESSAGE).length).toBe(1);
+      expect(
+        caps.filter((c) => c === (Capability.SEND_MESSAGE as string)).length,
+      ).toBe(1);
     });
   });
 
@@ -119,7 +121,7 @@ describe('CapabilityService', () => {
       prisma.session.findUnique.mockResolvedValue({ id: 'session-1' });
 
       await service.enableCapability('session-1', Capability.SEND_MESSAGE);
-      const capabilities = await service.disableCapability(
+      const capabilities = service.disableCapability(
         'session-1',
         Capability.SEND_MESSAGE,
       );
@@ -127,10 +129,10 @@ describe('CapabilityService', () => {
       expect(capabilities).not.toContain(Capability.SEND_MESSAGE);
     });
 
-    it('should throw NotFoundException for non-existent session', async () => {
-      await expect(
+    it('should throw NotFoundException for non-existent session', () => {
+      expect(() =>
         service.disableCapability('non-existent', Capability.SEND_MESSAGE),
-      ).rejects.toThrow(NotFoundException);
+      ).toThrow(NotFoundException);
     });
   });
 

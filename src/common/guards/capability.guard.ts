@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  SetMetadata,
 } from '@nestjs/common';
 import type { Cache } from 'cache-manager';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -44,22 +45,8 @@ export class CapabilityGuard implements CanActivate {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function RequireCapabilities(..._capabilities: Capability[]) {
-  return (
-    _target: object,
-    _propertyKey?: string,
-    descriptor?: PropertyDescriptor,
-  ) => {
-    if (descriptor) {
-      const original = descriptor.value as (...args: unknown[]) => unknown;
-      descriptor.value = function (...args: unknown[]) {
-        return original.apply(this, args) as boolean;
-      };
-    }
-    return descriptor ?? _target;
-  };
-}
+export const RequireCapabilities = (...capabilities: Capability[]) =>
+  SetMetadata('capability', capabilities);
 
 export async function checkSessionCapability(
   sessionId: string,

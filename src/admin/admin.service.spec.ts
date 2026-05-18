@@ -5,8 +5,13 @@ import { QueueService } from '../queue/queue.service.js';
 
 describe('AdminService', () => {
   let service: AdminService;
-  let mockPrisma: any;
-  let mockQueueService: any;
+  let mockPrisma: {
+    tenant: { findMany: jest.Mock };
+    session: { findMany: jest.Mock };
+  };
+  let mockQueueService: {
+    getQueueMetrics: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockPrisma = {
@@ -50,8 +55,14 @@ describe('AdminService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: QueueService, useValue: mockQueueService },
+        {
+          provide: PrismaService,
+          useValue: mockPrisma,
+        },
+        {
+          provide: QueueService,
+          useValue: mockQueueService,
+        },
       ],
     }).compile();
 
@@ -92,8 +103,8 @@ describe('AdminService', () => {
   });
 
   describe('getSystemMetrics', () => {
-    it('should return system metrics', async () => {
-      const result = await service.getSystemMetrics();
+    it('should return system metrics', () => {
+      const result = service.getSystemMetrics();
       expect(result).toHaveProperty('cpu');
       expect(result).toHaveProperty('memory');
       expect(result).toHaveProperty('uptime');

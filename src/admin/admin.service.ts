@@ -123,7 +123,7 @@ export class AdminService {
     }));
   }
 
-  async getSystemMetrics(): Promise<SystemMetrics> {
+  getSystemMetrics(): SystemMetrics {
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
     const usedMem = totalMem - freeMem;

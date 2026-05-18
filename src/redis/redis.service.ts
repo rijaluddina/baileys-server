@@ -1,8 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call,
-   @typescript-eslint/no-unsafe-member-access,
-   @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-assignment,
-   @typescript-eslint/require-await */
 import {
   Global,
   Module,
@@ -11,21 +6,18 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
+import Redis, { type RedisOptions } from 'ioredis';
 
 @Injectable()
 class RedisServiceClass {
   private readonly logger = new Logger(RedisServiceClass.name);
-  private client;
+  private client: Redis;
 
   constructor(private readonly configService: ConfigService) {
     const url =
       this.configService.get<string>('REDIS_URL') ?? 'redis://localhost:6379';
-    const Redis = require('ioredis');
 
-    const options: any = {
+    const options: RedisOptions = {
       lazyConnect: false,
       retryStrategy: (times: number) => Math.min(times * 100, 3000),
       maxRetriesPerRequest: 3,
@@ -34,8 +26,12 @@ class RedisServiceClass {
     const password = this.configService.get<string>('REDIS_PASSWORD');
     const username = this.configService.get<string>('REDIS_USERNAME');
 
-    if (password) options.password = password;
-    if (username) options.username = username;
+    if (password) {
+      options.password = password;
+    }
+    if (username) {
+      options.username = username;
+    }
 
     this.client = new Redis(url, options);
 
@@ -46,7 +42,7 @@ class RedisServiceClass {
     this.client.on('close', () => this.logger.warn('Redis connection closed'));
   }
 
-  getClient() {
+  getClient(): Redis {
     return this.client;
   }
 
@@ -130,12 +126,6 @@ class RedisServiceClass {
 
 export { RedisServiceClass as RedisService };
 
-/* eslint-enable @typescript-eslint/no-unsafe-call,
-   @typescript-eslint/no-unsafe-member-access,
-   @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-assignment,
-   @typescript-eslint/require-await */
-
 @Global()
 @Module({
   providers: [RedisServiceClass],
@@ -146,7 +136,7 @@ export class RedisModule implements OnModuleDestroy {
 
   constructor(private readonly redisService: RedisServiceClass) {}
 
-  async onModuleDestroy() {
+  async onModuleDestroy(): Promise<void> {
     await this.redisService.disconnect();
   }
 }

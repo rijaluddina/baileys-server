@@ -16,6 +16,13 @@ import { IdempotencyStrategy } from './strategies/idempotency.strategy.js';
 
 import { QUEUE_NAMES } from './queue.constants.js';
 
+type RedisConnectionConfig = {
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+};
+
 @Global()
 @Module({
   imports: [
@@ -24,7 +31,7 @@ import { QUEUE_NAMES } from './queue.constants.js';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const redisUrl = configService.get<string>('REDIS_URL');
-        let connection: any = {
+        let connection: RedisConnectionConfig = {
           host: configService.get<string>('REDIS_HOST', 'localhost'),
           port: configService.get<number>('REDIS_PORT', 6379),
           password: configService.get<string>('REDIS_PASSWORD') || undefined,
@@ -39,7 +46,7 @@ import { QUEUE_NAMES } from './queue.constants.js';
               username: parsed.username || undefined,
               password: parsed.password || undefined,
             };
-          } catch (e) {
+          } catch {
             // Fallback to defaults if URL is invalid
           }
         }

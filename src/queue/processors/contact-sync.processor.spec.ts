@@ -1,17 +1,32 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Job } from 'bullmq';
 import { ContactSyncProcessor } from './contact-sync.processor.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+
+type ContactSyncJob = {
+  sessionId: string;
+  contacts: Array<{
+    id: string;
+    name?: string;
+  }>;
+};
+
+type MockPrisma = {
+  contact: {
+    upsert: jest.Mock;
+  };
+  $transaction: jest.Mock;
+};
 
 describe('ContactSyncProcessor', () => {
   it('syncs valid contacts in a single transaction', async () => {
     const contactOperation = { model: 'contact', action: 'upsert' };
-    const prisma = {
+    const prisma: MockPrisma = {
       contact: {
         upsert: jest.fn().mockReturnValue(contactOperation),
       },
       $transaction: jest.fn().mockResolvedValue([]),
     };
-    const processor = new ContactSyncProcessor(prisma as any);
+    const processor = new ContactSyncProcessor(prisma as PrismaService);
     const job = {
       data: {
         sessionId: 'session-1',
@@ -20,7 +35,7 @@ describe('ContactSyncProcessor', () => {
           { id: '' },
         ],
       },
-    } as Job<never>;
+    } as Job<ContactSyncJob>;
 
     await processor.process(job);
 

@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { usePrismaAuthState } from './prisma-auth-state.js';
+import { Cache } from 'cache-manager';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 jest.mock('baileys', () => ({
   initAuthCreds: jest.fn(() => ({})),
@@ -16,9 +17,12 @@ jest.mock('baileys', () => ({
   },
 }));
 
+type MockPrisma = Pick<PrismaService, 'authCredential' | '$transaction'>;
+type MockCache = Pick<Cache, 'get' | 'set' | 'del'>;
+
 describe('usePrismaAuthState', () => {
   it('persists signal key mutations in a single transaction', async () => {
-    const prisma = {
+    const prisma: MockPrisma = {
       authCredential: {
         findUnique: jest.fn().mockResolvedValue(null),
         findMany: jest.fn(),
@@ -30,15 +34,15 @@ describe('usePrismaAuthState', () => {
       },
       $transaction: jest.fn().mockResolvedValue(undefined),
     };
-    const mockCache = {
+    const mockCache: MockCache = {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue(undefined),
       del: jest.fn().mockResolvedValue(undefined),
     };
     const { state } = await usePrismaAuthState(
       'session-1',
-      prisma as any,
-      mockCache as any,
+      prisma as PrismaService,
+      mockCache as Cache,
     );
 
     await state.keys.set({

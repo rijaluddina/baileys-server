@@ -7,17 +7,26 @@ jest.mock('../../redis/redis.service.js', () => ({
 
 import { RpcClientService } from './rpc-client.service.js';
 import { CB_CONFIG } from './rpc.types.js';
+import { RedisService } from '../../redis/redis.service.js';
+
+type MockRedisService = Pick<RedisService, 'subscribe' | 'publish'>;
 
 describe('RpcClientService', () => {
   let service: RpcClientService;
-  let mockRedis: any;
+  let mockRedis: MockRedisService;
+
+  const getCircuitState = (workerId: string) => {
+    const state = service.getCircuitState(workerId);
+    expect(state).toBeDefined();
+    return state!;
+  };
 
   beforeEach(() => {
     mockRedis = {
       subscribe: jest.fn().mockResolvedValue(undefined),
       publish: jest.fn().mockResolvedValue(1),
     };
-    service = new RpcClientService(mockRedis);
+    service = new RpcClientService(mockRedis as RedisService);
   });
 
   describe('Circuit Breaker', () => {
@@ -35,21 +44,21 @@ describe('RpcClientService', () => {
       expect(state?.state).toBe('open');
     });
 
-    it('should transition to half-open after timeout', async () => {
+    it('should transition to half-open after timeout', () => {
       for (let i = 0; i < CB_CONFIG.FAILURE_THRESHOLD; i++) {
         service.recordFailure('worker1');
       }
 
-      const state = service.getCircuitState('worker1');
+      const state = getCircuitState('worker1');
       const oldFailureTime = state?.lastFailureTime ?? 0;
       const newFailureTime = Date.now() - CB_CONFIG.OPEN_TIMEOUT_MS - 1000;
-      (state as any).lastFailureTime = newFailureTime;
+      state.lastFailureTime = newFailureTime;
 
       expect(service.checkCircuit('worker1')).toBe(true);
       const updatedState = service.getCircuitState('worker1');
       expect(updatedState?.state).toBe('half-open');
 
-      (state as any).lastFailureTime = oldFailureTime;
+      state.lastFailureTime = oldFailureTime;
     });
 
     it('should close circuit after success in half-open state', () => {
@@ -57,9 +66,8 @@ describe('RpcClientService', () => {
         service.recordFailure('worker1');
       }
 
-      const state = service.getCircuitState('worker1');
-      (state as any).lastFailureTime =
-        Date.now() - CB_CONFIG.OPEN_TIMEOUT_MS - 1000;
+      const state = getCircuitState('worker1');
+      state.lastFailureTime = Date.now() - CB_CONFIG.OPEN_TIMEOUT_MS - 1000;
       service.checkCircuit('worker1');
 
       service.recordSuccess('worker1');
@@ -85,9 +93,8 @@ describe('RpcClientService', () => {
         service.recordFailure('worker1');
       }
 
-      const state = service.getCircuitState('worker1');
-      (state as any).lastFailureTime =
-        Date.now() - CB_CONFIG.OPEN_TIMEOUT_MS - 1000;
+      const state = getCircuitState('worker1');
+      state.lastFailureTime = Date.now() - CB_CONFIG.OPEN_TIMEOUT_MS - 1000;
       service.checkCircuit('worker1');
 
       service.recordFailure('worker1');

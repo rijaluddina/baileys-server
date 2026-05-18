@@ -76,10 +76,7 @@ export class CapabilityService {
     return caps.capabilities;
   }
 
-  async disableCapability(
-    sessionId: string,
-    capability: string,
-  ): Promise<string[]> {
+  disableCapability(sessionId: string, capability: string): string[] {
     const caps = this.sessionCapabilities.get(sessionId);
     if (!caps) {
       throw new NotFoundException(`Session "${sessionId}" not found`);

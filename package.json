@@ -30,7 +30,6 @@
     "url": "https://github.com/rijaluddina/baileys-server/issues"
   },
   "homepage": "https://github.com/rijaluddina/baileys-server#readme",
-  "type": "module",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -44,7 +43,7 @@
     "test:cov": "jest --coverage --passWithNoTests",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "contract:generate": "tsx api/scripts/generate-openapi.ts"
+    "contract:generate": "tsx scripts/generate-openapi.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",

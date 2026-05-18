@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { TenantContextStore } from '../src/common/tenant/tenant-context.store.js';
@@ -51,9 +54,13 @@ describe('Capability Module (e2e)', () => {
 
   afterAll(async () => {
     // Cleanup only if we created the session
-    const session = await prisma.session.findUnique({ where: { id: testSessionId } });
+    const session = await prisma.session.findUnique({
+      where: { id: testSessionId },
+    });
     if (session && !session.userJid) {
-      await prisma.session.delete({ where: { id: testSessionId } }).catch(() => {});
+      await prisma.session
+        .delete({ where: { id: testSessionId } })
+        .catch(() => {});
     }
     await prisma.tenant.delete({ where: { id: testTenantId } }).catch(() => {});
     await app.close();
@@ -74,7 +81,7 @@ describe('Capability Module (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const data = JSON.parse(response.payload);
+    const data = JSON.parse(response.payload) as unknown[];
     expect(Array.isArray(data)).toBe(true);
   });
 
@@ -88,7 +95,7 @@ describe('Capability Module (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const data = JSON.parse(response.payload);
+    const data = JSON.parse(response.payload) as Record<string, unknown>;
     expect(typeof data.hasCapability).toBe('boolean');
   });
 
@@ -102,7 +109,7 @@ describe('Capability Module (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const data = JSON.parse(response.payload);
+    const data = JSON.parse(response.payload) as Record<string, unknown>;
     expect(data.success).toBe(true);
   });
 
@@ -116,7 +123,7 @@ describe('Capability Module (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const data = JSON.parse(response.payload);
+    const data = JSON.parse(response.payload) as Record<string, unknown>;
     expect(data.success).toBe(true);
   });
 });

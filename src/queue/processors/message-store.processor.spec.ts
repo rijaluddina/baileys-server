@@ -1,17 +1,37 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Job } from 'bullmq';
 import { MessageStoreProcessor } from './message-store.processor.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+
+type MessageStoreJob = {
+  sessionId: string;
+  messages: Array<{
+    key: {
+      remoteJid?: string;
+      id?: string;
+      fromMe?: boolean;
+    };
+    messageTimestamp?: number;
+    message?: { conversation: string };
+  }>;
+};
+
+type MockPrisma = {
+  message: {
+    upsert: jest.Mock;
+  };
+  $transaction: jest.Mock;
+};
 
 describe('MessageStoreProcessor', () => {
   it('stores valid messages in a single transaction', async () => {
     const messageOperation = { model: 'message', action: 'upsert' };
-    const prisma = {
+    const prisma: MockPrisma = {
       message: {
         upsert: jest.fn().mockReturnValue(messageOperation),
       },
       $transaction: jest.fn().mockResolvedValue([]),
     };
-    const processor = new MessageStoreProcessor(prisma as any);
+    const processor = new MessageStoreProcessor(prisma as PrismaService);
     const job = {
       data: {
         sessionId: 'session-1',
@@ -32,7 +52,7 @@ describe('MessageStoreProcessor', () => {
           },
         ],
       },
-    } as Job<never>;
+    } as Job<MessageStoreJob>;
 
     await processor.process(job);
 

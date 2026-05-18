@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { ConflictException } from '@nestjs/common';
 import { SessionService } from './session.service.js';
 import { usePrismaAuthState } from './prisma-auth-state.js';
@@ -65,12 +64,18 @@ describe('SessionService', () => {
       del: jest.fn().mockResolvedValue(undefined),
     };
     return {
-      service: new SessionService(
-        configService as any,
-        eventEmitter as any,
-        prisma as any,
-        queueService as any,
-        mockCache as any,
+      service: new (SessionService as unknown as new (
+        config: any,
+        events: any,
+        db: any,
+        queue: any,
+        cache: any,
+      ) => SessionService)(
+        configService,
+        eventEmitter,
+        prisma,
+        queueService,
+        mockCache,
       ),
       prisma,
       eventHandlers,

@@ -1,6 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 import { ApiKeyGuard } from './api-key.guard.js';
+
+type MockConfigService = Pick<ConfigService, 'get'>;
+type MockReflector = Pick<Reflector, 'getAllAndOverride'>;
 
 describe('ApiKeyGuard', () => {
   const handler = jest.fn();
@@ -22,15 +26,18 @@ describe('ApiKeyGuard', () => {
     configuredKey?: string;
     isPublic?: boolean;
   }) {
-    const configService = {
+    const configService: MockConfigService = {
       get: jest.fn().mockReturnValue(options.configuredKey),
     };
-    const reflector = {
+    const reflector: MockReflector = {
       getAllAndOverride: jest.fn().mockReturnValue(options.isPublic ?? false),
     };
 
     return {
-      guard: new ApiKeyGuard(configService as any, reflector as any),
+      guard: new ApiKeyGuard(
+        configService as ConfigService,
+        reflector as Reflector,
+      ),
       configService,
       reflector,
     };

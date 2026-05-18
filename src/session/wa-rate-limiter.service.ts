@@ -133,7 +133,6 @@ export class WaRateLimiterService {
     windowMs: number,
   ): Promise<number> {
     const key = `${this.keyPrefix}ratelimit:${sessionId}:${window}`;
-    const windowStart = now - windowMs;
 
     try {
       const client = this.redisService.getClient();

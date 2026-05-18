@@ -1,5 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { SessionController } from './session.controller.js';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SessionService } from './session.service.js';
+import { SessionDataService } from './session-data.service.js';
 
 jest.mock('baileys', () => ({
   __esModule: true,
@@ -11,23 +13,30 @@ jest.mock('baileys', () => ({
   },
 }));
 
+type MockSessionService = Pick<SessionService, 'reconnectSession'>;
+type MockSessionDataService = Pick<SessionDataService, never>;
+type MockEventEmitter = Pick<EventEmitter2, 'on' | 'off'>;
+
 jest.mock('./prisma-auth-state.js', () => ({
   usePrismaAuthState: jest.fn(),
 }));
 
 describe('SessionController', () => {
   it('delegates reconnect lifecycle to SessionService', async () => {
-    const sessionService = {
+    const sessionService: MockSessionService = {
       reconnectSession: jest
         .fn()
         .mockResolvedValue({ sessionId: 'session-1', status: 'connecting' }),
     };
-    const sessionDataService = {};
-    const eventEmitter = { on: jest.fn(), off: jest.fn() };
+    const sessionDataService: MockSessionDataService = {};
+    const eventEmitter: MockEventEmitter = {
+      on: jest.fn(),
+      off: jest.fn(),
+    };
     const controller = new SessionController(
-      sessionService as any,
-      sessionDataService as any,
-      eventEmitter as any,
+      sessionService as SessionService,
+      sessionDataService as SessionDataService,
+      eventEmitter as EventEmitter2,
     );
 
     await expect(controller.reconnect('session-1')).resolves.toEqual({

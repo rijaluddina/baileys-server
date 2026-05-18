@@ -1,30 +1,33 @@
 import { NotFoundException } from '@nestjs/common';
 import { TenantService } from './tenant.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 describe('TenantService', () => {
   let service: TenantService;
   let mockPrisma: {
     tenant: {
-      findUnique: jest.Mock;
-      findMany: jest.Mock;
-      create: jest.Mock;
-      update: jest.Mock;
-      delete: jest.Mock;
+      findUnique: jest.Mock<Promise<unknown>>;
+      findMany: jest.Mock<Promise<unknown[]>>;
+      create: jest.Mock<Promise<unknown>>;
+      update: jest.Mock<Promise<unknown>>;
+      delete: jest.Mock<Promise<unknown>>;
     };
   };
 
   beforeEach(() => {
     mockPrisma = {
       tenant: {
-        findUnique: jest.fn(),
-        findMany: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-        delete: jest.fn(),
+        findUnique: jest.fn<Promise<unknown>, [unknown]>(),
+        findMany: jest.fn<Promise<unknown[]>, [unknown]>(),
+        create: jest.fn<Promise<unknown>, [unknown]>(),
+        update: jest.fn<Promise<unknown>, [unknown]>(),
+        delete: jest.fn<Promise<unknown>, [unknown]>(),
       },
     };
-    service = new TenantService(mockPrisma as any);
+    service = new TenantService(mockPrisma as unknown as PrismaService);
   });
+
+  const matching = <T>(val: Partial<T>): T => expect.objectContaining(val) as T;
 
   describe('findById', () => {
     it('should return tenant when found', async () => {
@@ -79,7 +82,7 @@ describe('TenantService', () => {
   describe('create', () => {
     it('should create a new tenant', async () => {
       const createDto = { name: 'New Tenant', maxSessions: 5 };
-      const mockTenant = {
+      const mockTenant: Record<string, unknown> = {
         id: 'tenant-456',
         name: 'New Tenant',
         apiKey: 'tsk_generated',
@@ -96,12 +99,13 @@ describe('TenantService', () => {
       expect(result.name).toBe('New Tenant');
       expect(result.apiKey).toMatch(/^tsk_/);
       expect(mockPrisma.tenant.create).toHaveBeenCalledWith({
-        data: {
+        data: matching({
           name: 'New Tenant',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           apiKey: expect.stringMatching(/^tsk_/),
           webhookUrl: undefined,
           maxSessions: 5,
-        },
+        }),
       });
     });
 

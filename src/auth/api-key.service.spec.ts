@@ -5,7 +5,11 @@ import { PrismaService } from '../prisma/prisma.service.js';
 describe('ApiKeyService', () => {
   let service: ApiKeyService;
   let mockPrisma: {
-    apiKey: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
+    apiKey: {
+      create: jest.Mock;
+      findUnique: jest.Mock;
+      update: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
@@ -20,12 +24,17 @@ describe('ApiKeyService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ApiKeyService,
-        { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: PrismaService,
+          useValue: mockPrisma,
+        },
       ],
     }).compile();
 
     service = module.get<ApiKeyService>(ApiKeyService);
   });
+
+  const matching = <T>(val: Partial<T>): T => expect.objectContaining(val) as T;
 
   describe('generateKey', () => {
     it('should generate a key with correct format', async () => {
@@ -43,7 +52,7 @@ describe('ApiKeyService', () => {
     it('should call mockPrisma.apiKey.create', async () => {
       await service.generateKey('tenant-123', 'test-key');
       expect(mockPrisma.apiKey.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+        data: matching({
           tenantId: 'tenant-123',
           name: 'test-key',
           isActive: true,
@@ -73,8 +82,8 @@ describe('ApiKeyService', () => {
 
     it('should return false for empty or non-string input', () => {
       expect(service.validateKey('')).toBe(false);
-      expect(service.validateKey(null as any)).toBe(false);
-      expect(service.validateKey(undefined as any)).toBe(false);
+      expect(validateKey(null)).toBe(false);
+      expect(validateKey(undefined)).toBe(false);
     });
   });
 
@@ -94,7 +103,7 @@ describe('ApiKeyService', () => {
         data: { isActive: false },
       });
       expect(mockPrisma.apiKey.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+        data: matching({
           tenantId: 'tenant-123',
           name: 'test-key',
           isActive: true,
@@ -120,4 +129,7 @@ describe('ApiKeyService', () => {
       });
     });
   });
+
+  const validateKey = (value: unknown): boolean =>
+    service.validateKey(typeof value === 'string' ? value : '');
 });

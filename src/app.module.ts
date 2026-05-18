@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -22,10 +21,11 @@ import { EventModule } from './event/event.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { MediaModule } from './media/media.module.js';
 import { BaileysExceptionFilter } from './common/filters/baileys-exception.filter.js';
+import { AppConfigModule } from './common/config/config.module.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    AppConfigModule,
     RedisCacheModule,
     RedisModule,
     ThrottlerModule.forRoot([

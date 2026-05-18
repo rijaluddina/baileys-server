@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { TenantContextStore } from '../src/common/tenant/tenant-context.store.js';
@@ -47,7 +50,9 @@ describe('Auth Module (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.apiKey.deleteMany({ where: { tenantId: testTenantId } }).catch(() => {});
+    await prisma.apiKey
+      .deleteMany({ where: { tenantId: testTenantId } })
+      .catch(() => {});
     await prisma.tenant.delete({ where: { id: testTenantId } }).catch(() => {});
     await app.close();
   });
@@ -67,7 +72,7 @@ describe('Auth Module (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const data = JSON.parse(response.payload);
+    const data = JSON.parse(response.payload) as unknown[];
     expect(Array.isArray(data)).toBe(true);
     expect(data.length).toBeGreaterThan(0);
   });
@@ -82,7 +87,7 @@ describe('Auth Module (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const data = JSON.parse(response.payload);
+    const data = JSON.parse(response.payload) as Record<string, unknown>;
     expect(data.isActive).toBe(false);
   });
 
@@ -96,7 +101,7 @@ describe('Auth Module (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const data = JSON.parse(response.payload);
+    const data = JSON.parse(response.payload) as Record<string, unknown>;
     expect(data.isActive).toBe(true);
   });
 });

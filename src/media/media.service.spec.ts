@@ -17,14 +17,16 @@ jest.mock('@aws-sdk/s3-request-presigner', () => ({
 
 describe('MediaService', () => {
   let service: MediaService;
-  let s3Service: jest.Mocked<S3Service>;
+  const generatePresignedUploadUrl = jest
+    .fn()
+    .mockResolvedValue('https://signed.url');
+  const getObjectUrl = jest.fn().mockReturnValue('https://media.url');
+  const deleteObject = jest.fn();
 
   const mockS3Service = {
-    generatePresignedUploadUrl: jest
-      .fn()
-      .mockResolvedValue('https://signed.url'),
-    getObjectUrl: jest.fn().mockResolvedValue('https://media.url'),
-    deleteObject: jest.fn(),
+    generatePresignedUploadUrl,
+    getObjectUrl,
+    deleteObject,
   };
 
   const mockConfigService = {
@@ -36,6 +38,8 @@ describe('MediaService', () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MediaService,
@@ -45,7 +49,6 @@ describe('MediaService', () => {
     }).compile();
 
     service = module.get<MediaService>(MediaService);
-    s3Service = module.get(S3Service);
   });
 
   it('should be defined', () => {
@@ -63,7 +66,7 @@ describe('MediaService', () => {
       expect(result.uploadId).toBeDefined();
       expect(result.uploadUrl).toBe('https://signed.url');
       expect(result.mediaKey).toBeDefined();
-      expect(s3Service.generatePresignedUploadUrl).toHaveBeenCalled();
+      expect(generatePresignedUploadUrl).toHaveBeenCalled();
     });
   });
 
@@ -75,14 +78,14 @@ describe('MediaService', () => {
         size: 1024,
       });
 
-      const result = await service.completeUpload(initResult.uploadId);
+      const result = service.completeUpload(initResult.uploadId);
 
       expect(result.mediaId).toBeDefined();
       expect(result.url).toBe('https://media.url');
     });
 
-    it('should throw error for invalid upload ID', async () => {
-      await expect(service.completeUpload('invalid-id')).rejects.toThrow(
+    it('should throw error for invalid upload ID', () => {
+      expect(() => service.completeUpload('invalid-id')).toThrow(
         'Upload session not found or expired',
       );
     });

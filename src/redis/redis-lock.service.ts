@@ -73,10 +73,6 @@ export class RedisLockService {
     `;
 
     try {
-      /* eslint-disable @typescript-eslint/no-unsafe-call,
-         @typescript-eslint/no-unsafe-member-access,
-         @typescript-eslint/no-unsafe-assignment */
-
       const client = this.redisService.getClient();
       const result = await client.eval(script, 1, key, token);
       return result === 1;
@@ -100,10 +96,6 @@ export class RedisLockService {
     `;
 
     try {
-      /* eslint-disable @typescript-eslint/no-unsafe-call,
-         @typescript-eslint/no-unsafe-member-access,
-         @typescript-eslint/no-unsafe-assignment */
-
       const client = this.redisService.getClient();
       const result = await client.eval(script, 1, key, token, ttlMs.toString());
       return result === 1;

@@ -61,14 +61,14 @@ export class MediaService {
     };
   }
 
-  async completeUpload(uploadId: string): Promise<CompleteUploadResponseDto> {
+  completeUpload(uploadId: string): CompleteUploadResponseDto {
     const session = this.uploadSessions.get(uploadId);
     if (!session) {
       throw new Error('Upload session not found or expired');
     }
 
     const mediaId = session.key.split('/')[1];
-    const url = await this.s3Service.getObjectUrl(session.key);
+    const url = this.s3Service.getObjectUrl(session.key);
 
     this.uploadSessions.delete(uploadId);
 
@@ -85,15 +85,16 @@ export class MediaService {
       size: number;
       buffer?: Buffer;
     },
-    metadata?: string,
+    sessionId?: string,
   ): Promise<StreamUploadResponseDto> {
+    void sessionId;
     const mediaKey = randomUUID();
     const key = `uploads/${mediaKey}/${file.originalname}`;
 
     await this.s3Service.generatePresignedUploadUrl(key, file.mimetype);
     await this.s3Service.deleteObject(key);
 
-    const url = await this.s3Service.getObjectUrl(key);
+    const url = this.s3Service.getObjectUrl(key);
 
     return {
       mediaId: mediaKey,

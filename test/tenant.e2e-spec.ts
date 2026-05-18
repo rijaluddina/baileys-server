@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { TenantContextStore } from '../src/common/tenant/tenant-context.store.js';
@@ -55,7 +58,7 @@ describe('Tenant Module (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const data = JSON.parse(response.payload);
+    const data = JSON.parse(response.payload) as Record<string, unknown>;
     expect(data.id).toBe(testTenantId);
     expect(data.name).toBe('Test Tenant');
   });
@@ -68,7 +71,7 @@ describe('Tenant Module (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const data = JSON.parse(response.payload);
+    const data = JSON.parse(response.payload) as unknown[];
     expect(Array.isArray(data)).toBe(true);
   });
 
@@ -83,7 +86,7 @@ describe('Tenant Module (e2e)', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const data = JSON.parse(response.payload);
+    const data = JSON.parse(response.payload) as Record<string, unknown>;
     expect(data.name).toBe('Updated Tenant Name');
   });
 });

@@ -4,9 +4,11 @@ import { SessionDataService } from './session-data.service.js';
 import { SessionController } from './session.controller.js';
 import { SessionGateway } from './session.gateway.js';
 import { WaRateLimiterService } from './wa-rate-limiter.service.js';
+import { RedisModule } from '../redis/redis.module.js';
 
 @Global()
 @Module({
+  imports: [RedisModule],
   providers: [
     SessionService,
     SessionDataService,

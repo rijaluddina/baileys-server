@@ -7,8 +7,7 @@ import { TenantContextStore } from '../common/tenant/tenant-context.store.js';
 describe('AuthService', () => {
   let service: AuthService;
   let prisma: { tenant: { findUnique: jest.Mock } };
-  let tenantContextStoreSet: jest.Mock;
-  let tenantContextStoreSetNot: jest.Mock;
+  let tenantContextSetSpy: jest.SpiedFunction<typeof TenantContextStore.set>;
 
   const mockTenant = {
     id: 'tenant-123',
@@ -23,15 +22,9 @@ describe('AuthService', () => {
       },
     };
 
-    tenantContextStoreSet = jest.fn();
-    tenantContextStoreSetNot = jest.fn();
-
-    jest
+    tenantContextSetSpy = jest
       .spyOn(TenantContextStore, 'set')
-      .mockImplementation(tenantContextStoreSet);
-    jest
-      .spyOn(TenantContextStore, 'set')
-      .mockImplementation(tenantContextStoreSetNot);
+      .mockImplementation(jest.fn());
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -61,8 +54,7 @@ describe('AuthService', () => {
         tenantId: 'tenant-123',
         tenantName: 'Test Tenant',
       });
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(TenantContextStore.set).toHaveBeenCalledWith({
+      expect(tenantContextSetSpy).toHaveBeenCalledWith({
         tenantId: 'tenant-123',
       });
     });
@@ -103,8 +95,7 @@ describe('AuthService', () => {
         tenantId: 'tenant-123',
         tenantName: 'Test Tenant',
       });
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(TenantContextStore.set).not.toHaveBeenCalled();
+      expect(tenantContextSetSpy).not.toHaveBeenCalled();
     });
 
     it('should return null for invalid API key', async () => {

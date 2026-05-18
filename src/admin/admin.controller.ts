@@ -19,10 +19,8 @@ export class AdminController {
 
   @Get('metrics')
   async getMetrics() {
-    const [system, queue] = await Promise.all([
-      this.adminService.getSystemMetrics(),
-      this.adminService.getQueueMetrics(),
-    ]);
+    const system = this.adminService.getSystemMetrics();
+    const queue = await this.adminService.getQueueMetrics();
     return { system, queue };
   }
 }

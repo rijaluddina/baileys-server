@@ -56,7 +56,7 @@ export class S3Service {
     return getSignedUrl(this.client, command, { expiresIn });
   }
 
-  async getObjectUrl(key: string): Promise<string> {
+  getObjectUrl(key: string): string {
     if (this.config.endpoint) {
       return `${this.config.endpoint}/${this.config.bucket}/${key}`;
     }

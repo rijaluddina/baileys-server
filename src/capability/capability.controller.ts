@@ -39,11 +39,11 @@ export class CapabilityController {
     name: 'capabilityName',
     description: 'Capability name (e.g., messaging.send)',
   })
-  async disableCapability(
+  disableCapability(
     @Param('sessionId') sessionId: string,
     @Param('capabilityName') capabilityName: string,
-  ): Promise<{ success: boolean; capability: string }> {
-    await this.capabilityService.disableCapability(sessionId, capabilityName);
+  ): { success: boolean; capability: string } {
+    this.capabilityService.disableCapability(sessionId, capabilityName);
     return { success: true, capability: capabilityName };
   }
 

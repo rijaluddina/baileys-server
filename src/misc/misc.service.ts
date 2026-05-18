@@ -214,8 +214,13 @@ export class MiscService {
     after: number,
   ) {
     const socket = this.sessionService.getSocket(sessionId);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return socket.newsletterFetchMessages(newsletterJid, count, since, after);
+    const messages: unknown = await socket.newsletterFetchMessages(
+      newsletterJid,
+      count,
+      since,
+      after,
+    );
+    return messages;
   }
 
   // === Blocklist ===

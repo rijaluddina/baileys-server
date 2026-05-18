@@ -34,7 +34,10 @@ export class CapabilityGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<{
+      params?: { sessionId?: string };
+      body?: { sessionId?: string };
+    }>();
     const sessionId = request.params?.sessionId || request.body?.sessionId;
 
     if (!sessionId) {
