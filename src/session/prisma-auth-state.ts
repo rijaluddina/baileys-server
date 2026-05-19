@@ -128,7 +128,7 @@ export async function usePrismaAuthState(
       },
 
       set: async (data: SignalDataSet): Promise<void> => {
-        const operations: Prisma.PrismaPromise<unknown>[] = [];
+        const promises: Promise<unknown>[] = [];
 
         for (const _type in data) {
           const typ = _type as keyof SignalDataTypeMap;
@@ -141,45 +141,40 @@ export async function usePrismaAuthState(
 
             if (value) {
               const serialized = JSON.stringify(value, BufferJSON.replacer);
-              operations.push(
-                prisma.authCredential.upsert({
-                  where: {
-                    sessionId_type_keyId: { sessionId, type: t, keyId },
-                  },
-                  create: { sessionId, type: t, keyId, data: serialized },
-                  update: { data: serialized },
-                }),
+              promises.push(
+                prisma.authCredential
+                  .upsert({
+                    where: {
+                      sessionId_type_keyId: { sessionId, type: t, keyId },
+                    },
+                    create: { sessionId, type: t, keyId, data: serialized },
+                    update: { data: serialized },
+                  })
+                  .then(async () => {
+                    const cacheKey = `auth:${sessionId}:key:${typ}:${id}`;
+                    await cache.set(cacheKey, serialized);
+                  }),
               );
             } else {
-              operations.push(
-                prisma.authCredential.deleteMany({
-                  where: { sessionId, type: t, keyId },
-                }),
+              promises.push(
+                prisma.authCredential
+                  .deleteMany({
+                    where: { sessionId, type: t, keyId },
+                  })
+                  .then(async () => {
+                    const cacheKey = `auth:${sessionId}:key:${typ}:${id}`;
+                    await cache.del(cacheKey);
+                  }),
               );
             }
           }
         }
 
-        if (operations.length > 0) {
+        if (promises.length > 0) {
           try {
-            await prisma.$transaction(operations);
-
-            for (const _type in data) {
-              const typ = _type as keyof SignalDataTypeMap;
-              const entries = data[typ];
-              if (!entries) continue;
-
-              for (const id in entries) {
-                const value = entries[id];
-                const cacheKey = `auth:${sessionId}:key:${typ}:${id}`;
-                if (value) {
-                  const serialized = JSON.stringify(value, BufferJSON.replacer);
-                  await cache.set(cacheKey, serialized);
-                } else {
-                  await cache.del(cacheKey);
-                }
-              }
-            }
+            // Use Promise.all with small chunks if needed, or all at once
+            // Prisma with pg-pool can handle multiple concurrent queries better than one long transaction
+            await Promise.all(promises);
           } catch (err) {
             logger?.error(
               `Failed to save keys for session "${sessionId}": ${err}`,

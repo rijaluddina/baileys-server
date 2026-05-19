@@ -14,10 +14,10 @@ import { PrismaModule } from '../prisma/prisma.module.js';
     AuthService,
     ApiKeyService,
     ApiKeyStrategy,
-    {
-      provide: APP_GUARD,
-      useClass: AuthGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: AuthGuard,
+    // },
   ],
   exports: [AuthService, ApiKeyService, ApiKeyStrategy],
 })

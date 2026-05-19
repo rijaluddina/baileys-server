@@ -36,6 +36,7 @@ interface SessionData {
   retryCount: number;
   saveCreds: () => Promise<void>;
   seenMessages: Set<string>;
+  isLoggingOut?: boolean;
 }
 
 const SEEN_MESSAGES_MAX = 10_000;
@@ -193,8 +194,15 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
   ) {
     this.clearReconnectTimer(sessionId);
 
+    // Clean up existing in-memory session if any (forcefully)
     if (this.sessions.has(sessionId)) {
-      throw new ConflictException(`Session "${sessionId}" already exists`);
+      const existing = this.sessions.get(sessionId)!;
+      if (existing.status === 'open') {
+        throw new ConflictException(`Session "${sessionId}" already exists and is connected`);
+      }
+      // If it's in connecting/close state in memory, end it and replace
+      await existing.socket.end(undefined).catch(() => {});
+      this.sessions.delete(sessionId);
     }
 
     // Validate webhook URL to prevent SSRF
@@ -284,6 +292,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
       void (async () => {
         const { connection, lastDisconnect, qr } = update;
 
+        // Ensure we are acting on the correct session instance
+        if (this.sessions.get(sessionId) !== sessionData) {
+          return;
+        }
+
         if (qr && !options.pairingCode) {
           const qrBase64 = await QRCode.toDataURL(qr);
           sessionData.qr = qrBase64;
@@ -335,7 +348,11 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
             | { output?: { statusCode?: number } }
             | undefined;
           const statusCode = disconnectError?.output?.statusCode;
-          const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+
+          // DO NOT reconnect if it's an explicit logout or if we are in the middle of logging out
+          const shouldReconnect =
+            statusCode !== DisconnectReason.loggedOut &&
+            !sessionData.isLoggingOut;
 
           this.logger.warn(
             `Session "${sessionId}" disconnected (code: ${statusCode}), reconnect: ${shouldReconnect}`,
@@ -371,7 +388,8 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
             this.clearReconnectTimer(sessionId);
             const timer = setTimeout(() => {
               this.reconnectTimers.delete(sessionId);
-              if (!this.sessions.has(sessionId)) return;
+              // Safety check: don't reconnect if session was replaced/deleted
+              if (this.sessions.get(sessionId) !== sessionData) return;
               this.sessions.delete(sessionId);
               this.createSession(sessionId, options).catch((err: unknown) => {
                 this.logger.error(
@@ -381,16 +399,26 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
             }, delay);
             this.reconnectTimers.set(sessionId, timer);
           } else if (!shouldReconnect) {
-            this.logger.log(`Session "${sessionId}" logged out, cleaning up`);
+            this.logger.log(
+              `Session "${sessionId}" logged out or deleted, cleaning up`,
+            );
             this.clearReconnectTimer(sessionId);
-            this.sessions.delete(sessionId);
+
+            // Only delete if it's still this specific session instance
+            if (this.sessions.get(sessionId) === sessionData) {
+              this.sessions.delete(sessionId);
+            }
 
             // Clean up DB — cascade delete auth credentials
             await this.prisma.session
-              .delete({
+              .deleteMany({
                 where: { id: sessionId },
               })
-              .catch(() => {});
+              .catch((err) => {
+                this.logger.error(
+                  `Failed to delete session ${sessionId} from DB: ${String(err)}`,
+                );
+              });
 
             this.eventEmitter.emit('session.logged-out', { sessionId });
             this.emitWebhook(sessionId, 'connection', { status: 'logged-out' });
@@ -407,6 +435,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     // Save credentials on update (to DB via Prisma)
     socket.ev.on('creds.update', () => {
+      if (this.sessions.get(sessionId) !== sessionData) return;
       void saveCreds().catch((err: unknown) => {
         this.logger.error(
           `Critical: Failed to save credentials for ${sessionId}: ${String(err)}`,
@@ -416,6 +445,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     // Store incoming messages via BullMQ queue
     socket.ev.on('messages.upsert', (m: BaileysEventMap['messages.upsert']) => {
+      if (this.sessions.get(sessionId) !== sessionData) return;
       const newMessages = m.messages.filter((msg) => {
         if (!msg.key?.id) return false;
         if (sessionData.seenMessages.has(msg.key.id)) return false;
@@ -436,6 +466,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     // Handle history sync
     socket.ev.on('messaging-history.set', (data) => {
+      if (this.sessions.get(sessionId) !== sessionData) return;
       if (data.messages) {
         for (const msg of data.messages) {
           if (msg.key?.id) {
@@ -455,6 +486,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     // Sync contacts via BullMQ queue
     socket.ev.on('contacts.upsert', (contacts) => {
+      if (this.sessions.get(sessionId) !== sessionData) return;
       void this.queueService
         .addContactSyncJob(sessionId, contacts as unknown[])
         .catch((err: unknown) => {
@@ -465,6 +497,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     });
 
     socket.ev.on('contacts.update', (contacts) => {
+      if (this.sessions.get(sessionId) !== sessionData) return;
       void this.queueService
         .addContactSyncJob(sessionId, contacts as unknown[])
         .catch((err: unknown) => {
@@ -476,6 +509,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     // Sync chats via BullMQ queue
     socket.ev.on('chats.upsert', (chats) => {
+      if (this.sessions.get(sessionId) !== sessionData) return;
       void this.queueService
         .addChatSyncJob(sessionId, chats as unknown[])
         .catch((err: unknown) => {
@@ -486,6 +520,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     });
 
     socket.ev.on('chats.update', (chats) => {
+      if (this.sessions.get(sessionId) !== sessionData) return;
       void this.queueService
         .addChatSyncJob(sessionId, chats as unknown[])
         .catch((err: unknown) => {
@@ -496,6 +531,7 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     });
 
     socket.ev.on('chats.delete', (jids: string[]) => {
+      if (this.sessions.get(sessionId) !== sessionData) return;
       void this.prisma.chat
         .deleteMany({ where: { sessionId, jid: { in: jids } } })
         .catch((err: unknown) => {
@@ -519,16 +555,9 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
   async deleteSession(sessionId: string) {
     this.clearReconnectTimer(sessionId);
     const session = this.sessions.get(sessionId);
-    if (!session) {
-      // Check if session exists in DB
-      const dbSession = await this.prisma.session.findUnique({
-        where: { id: sessionId },
-      });
-      if (!dbSession)
-        throw new NotFoundException(`Session "${sessionId}" not found`);
-    }
 
     if (session) {
+      session.isLoggingOut = true; // Prevent reconnect
       try {
         await session.socket.end(undefined);
       } catch {
@@ -539,10 +568,12 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
 
     // Delete from DB (cascades to auth_credentials, messages, contacts, chats, webhook_logs)
     await this.prisma.session
-      .delete({
+      .deleteMany({
         where: { id: sessionId },
       })
-      .catch(() => {});
+      .catch((err) => {
+        this.logger.error(`Failed to delete session ${sessionId} from DB: ${String(err)}`);
+      });
 
     this.logger.log(`Session "${sessionId}" deleted`);
     return { sessionId, status: 'deleted' };
@@ -554,21 +585,28 @@ export class SessionService implements OnModuleInit, OnModuleDestroy {
     if (!session)
       throw new NotFoundException(`Session "${sessionId}" not found`);
 
+    session.isLoggingOut = true; // Mark as logging out to prevent auto-reconnect
+
     try {
       await session.socket.logout();
-    } catch {
-      // Ignore
+    } catch (err) {
+      this.logger.error(`Logout error for ${sessionId}: ${String(err)}`);
     }
 
     this.sessions.delete(sessionId);
 
     // Delete from DB
     await this.prisma.session
-      .delete({
+      .deleteMany({
         where: { id: sessionId },
       })
-      .catch(() => {});
+      .catch((err) => {
+        this.logger.error(
+          `Failed to delete session ${sessionId} from DB after logout: ${String(err)}`,
+        );
+      });
 
+    this.logger.log(`Session "${sessionId}" logged out and data cleared successfully`);
     return { sessionId, status: 'logged-out' };
   }
 

@@ -26,45 +26,54 @@ export class ContactSyncProcessor extends WorkerHost {
   async process(job: Job<ContactJob>): Promise<void> {
     const { sessionId, contacts } = job.data;
 
-    const operations = contacts.flatMap((contact) => {
-      if (!contact.id) return [];
-
-      return this.prisma.contact.upsert({
-        where: {
-          sessionId_jid: {
-            sessionId,
-            jid: contact.id,
-          },
-        },
-        create: {
-          sessionId,
-          jid: contact.id,
-          name: contact.name ?? null,
-          notify: contact.notify ?? null,
-          imgUrl: contact.imgUrl ?? null,
-          status: contact.status ?? null,
-        },
-        update: {
-          name: contact.name ?? undefined,
-          notify: contact.notify ?? undefined,
-          imgUrl: contact.imgUrl ?? undefined,
-          status: contact.status ?? undefined,
-        },
-      });
-    });
-
-    if (operations.length > 0) {
+    if (contacts.length > 0) {
       try {
-        await this.prisma.$transaction(operations);
+        const results = await Promise.allSettled(
+          contacts.map((contact) => {
+            if (!contact.id) return Promise.resolve();
+
+            return this.prisma.contact.upsert({
+              where: {
+                sessionId_jid: {
+                  sessionId,
+                  jid: contact.id,
+                },
+              },
+              create: {
+                sessionId,
+                jid: contact.id,
+                name: contact.name ?? null,
+                notify: contact.notify ?? null,
+                imgUrl: contact.imgUrl ?? null,
+                status: contact.status ?? null,
+              },
+              update: {
+                name: contact.name ?? undefined,
+                notify: contact.notify ?? undefined,
+                imgUrl: contact.imgUrl ?? undefined,
+                status: contact.status ?? undefined,
+              },
+            });
+          }),
+        );
+
+        const failed = results.filter((r) => r.status === 'rejected');
+        if (failed.length > 0) {
+          this.logger.warn(
+            `Failed to sync ${failed.length} contacts for session ${sessionId}. First error: ${
+              (failed[0] as PromiseRejectedResult).reason
+            }`,
+          );
+        }
       } catch (err) {
-        this.logger.warn(
-          `Failed to sync contacts for session ${sessionId}: ${err}`,
+        this.logger.error(
+          `Critical failure during contact sync for session ${sessionId}: ${err}`,
         );
       }
     }
 
     this.logger.debug(
-      `Synced ${operations.length}/${contacts.length} contacts for session ${sessionId}`,
+      `Sync process finished for ${contacts.length} contacts in session ${sessionId}`,
     );
   }
 }

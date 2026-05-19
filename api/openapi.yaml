@@ -36,7 +36,7 @@ paths:
       tags: [Health]
       operationId: getHealth
       responses:
-        '200':
+        "200":
           description: Service is healthy
           content:
             application/json:
@@ -55,7 +55,7 @@ paths:
       tags: [Tenant]
       operationId: listTenants
       responses:
-        '200':
+        "200":
           description: List of tenants
     post:
       tags: [Tenant]
@@ -72,7 +72,7 @@ paths:
                 maxSessions:
                   type: number
       responses:
-        '201':
+        "201":
           description: Tenant created
 
   /tenants/{id}:
@@ -86,7 +86,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Tenant details
     patch:
       tags: [Tenant]
@@ -103,7 +103,7 @@ paths:
             schema:
               type: object
       responses:
-        '200':
+        "200":
           description: Tenant updated
     delete:
       tags: [Tenant]
@@ -115,7 +115,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Tenant deleted
 
   /auth/keys:
@@ -124,14 +124,14 @@ paths:
       operationId: listApiKeys
       summary: List all API keys for current tenant
       responses:
-        '200':
+        "200":
           description: List of API keys
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ApiKey'
+                  $ref: "#/components/schemas/ApiKey"
 
   /auth/keys/rotate/{id}:
     post:
@@ -145,7 +145,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: New key generated
           content:
             application/json:
@@ -167,7 +167,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Key deactivated
 
   /auth/keys/activate/{id}:
@@ -182,7 +182,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Key activated
 
   /capabilities/{sessionId}:
@@ -197,7 +197,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of capabilities
           content:
             application/json:
@@ -223,7 +223,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Capability check result
           content:
             application/json:
@@ -248,7 +248,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Capability enabled
     delete:
       tags: [Capabilities]
@@ -266,7 +266,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Capability disabled
 
   /admin/tenants:
@@ -275,7 +275,7 @@ paths:
       operationId: getAllTenants
       summary: Get all tenants (admin)
       responses:
-        '200':
+        "200":
           description: List of all tenants
 
   /admin/sessions:
@@ -290,7 +290,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of all sessions
 
   /admin/metrics:
@@ -299,7 +299,7 @@ paths:
       operationId: getSystemMetrics
       summary: Get system metrics
       responses:
-        '200':
+        "200":
           description: System metrics
 
   /sessions:
@@ -307,7 +307,7 @@ paths:
       tags: [Sessions]
       operationId: listSessions
       responses:
-        '200':
+        "200":
           description: List of sessions
     post:
       tags: [Sessions]
@@ -321,7 +321,7 @@ paths:
                 name:
                   type: string
       responses:
-        '201':
+        "201":
           description: Session created
 
   /sessions/{sessionId}:
@@ -335,7 +335,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Session details
     delete:
       tags: [Sessions]
@@ -347,7 +347,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Session deleted
 
   /sessions/{sessionId}/connect:
@@ -361,7 +361,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: QR code generated
 
   /sessions/{sessionId}/disconnect:
@@ -375,7 +375,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Session disconnected
 
   /sessions/{sessionId}/reconnect:
@@ -389,13 +389,14 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Session reconnecting
 
   /sessions/{sessionId}/messages:
     get:
       tags: [Messaging]
       operationId: getMessages
+      summary: Get message history
       parameters:
         - name: sessionId
           in: path
@@ -403,11 +404,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Message history
     post:
       tags: [Messaging]
       operationId: sendMessage
+      summary: Send various types of WhatsApp messages
       parameters:
         - name: sessionId
           in: path
@@ -415,19 +417,24 @@ paths:
           schema:
             type: string
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                to:
-                  type: string
-                content:
-                  type: object
+              $ref: "#/components/schemas/SendMessageRequest"
       responses:
-        '201':
-          description: Message sent
-
+        "201":
+          description: Pesan berhasil dikirim
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendMessageResponse"
+        "400":
+          description: Bad Request (Format payload salah)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseError"
   /sessions/{sessionId}/groups:
     get:
       tags: [Groups]
@@ -439,7 +446,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of groups
     post:
       tags: [Groups]
@@ -456,7 +463,7 @@ paths:
             schema:
               type: object
       responses:
-        '201':
+        "201":
           description: Group created
 
   /sessions/{sessionId}/chats:
@@ -470,7 +477,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of chats
 
   /sessions/{sessionId}/contacts:
@@ -484,7 +491,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of contacts
 
   /sessions/{sessionId}/webhooks:
@@ -498,7 +505,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of webhooks
     post:
       tags: [Webhooks]
@@ -522,7 +529,7 @@ paths:
                   items:
                     type: string
       responses:
-        '201':
+        "201":
           description: Webhook created
 
   /sessions/{sessionId}/media/upload/init:
@@ -548,7 +555,7 @@ paths:
                 size:
                   type: number
       responses:
-        '200':
+        "200":
           description: Upload initiated
 
   /sessions/{sessionId}/media/upload/{id}/complete:
@@ -567,7 +574,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Upload completed
 
 components:
@@ -578,6 +585,185 @@ components:
       in: header
 
   schemas:
+    # --- BASE RESPONSES (Response Envelope) ---
+    ApiResponseSuccess:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+    ApiResponseError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Failed to execute request"
+        error_code:
+          type: string
+          example: "SESSION_NOT_FOUND"
+
+    # --- SEND MESSAGE REQUEST ---
+    SendMessageRequest:
+      type: object
+      required:
+        - to
+        - type
+      properties:
+        to:
+          type: string
+          description: "WhatsApp destination number with country code (e.g., 62812345678) or Group JID (e.g., 12345678-1234@g.us)"
+          example: "62812345678"
+        type:
+          type: string
+          description: "Type of message to send"
+          enum: [text, image, video, document, audio, poll]
+          example: "text"
+        text:
+          $ref: "#/components/schemas/TextMessageContent"
+        image:
+          $ref: "#/components/schemas/MediaMessageContent"
+        video:
+          $ref: "#/components/schemas/MediaMessageContent"
+        document:
+          $ref: "#/components/schemas/DocumentMessageContent"
+        audio:
+          $ref: "#/components/schemas/MediaMessageContent"
+        poll:
+          $ref: "#/components/schemas/PollMessageContent"
+
+    # --- MESSAGE CONTENT SUB-SCHEMAS ---
+    TextMessageContent:
+      type: object
+      required:
+        - body
+      properties:
+        body:
+          type: string
+          description: "Message text body"
+          example: "Hello, this is a structured text message from the API!"
+
+    MediaMessageContent:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: "Public URL of the media file to be downloaded by the server and sent"
+          example: "https://domain.com/files/foto.jpg"
+        caption:
+          type: string
+          description: "Media description or caption (optional)"
+          example: "This is the photo caption"
+
+    DocumentMessageContent:
+      type: object
+      required:
+        - url
+        - filename
+      properties:
+        url:
+          type: string
+          format: uri
+          description: "Public URL of the document file to be downloaded by the server and sent"
+          example: "https://domain.com/files/invoice.pdf"
+        filename:
+          type: string
+          description: "Document filename when received on the target WhatsApp"
+          example: "Invoice-Mei.pdf"
+        caption:
+          type: string
+          description: "Caption dokumen (optional)"
+          example: "Please check the attached document"
+
+    PollMessageContent:
+      type: object
+      required:
+        - name
+        - options
+      properties:
+        name:
+          type: string
+          description: "Question or title of the poll"
+          example: "When shall we have a meeting?"
+        options:
+          type: array
+          description: "List of poll options"
+          items:
+            type: string
+          example: ["Monday Morning", "Tuesday Afternoon", "Thursday Evening"]
+        selectableCount:
+          type: integer
+          description: "Number of options the user can choose (1 = Single choice, 0 = Cancel limit/Multiple choice)"
+          default: 1
+          example: 1
+
+    # --- SPECIFIC ENDPOINT RESPONSES ---
+    SendMessageResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponseSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                messageId:
+                  type: string
+                  example: "3EB0C123456789AF"
+                timestamp:
+                  type: integer
+                  format: int64
+                  example: 1672531199
+
+    # --- RESTRUCTURED INCOMING MESSAGE (For History & Webhook) ---
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "Unique WhatsApp Message ID"
+          example: "3EB0C123456789AF"
+        from:
+          type: string
+          description: "Sender number or origin JID"
+          example: "62812345678"
+        pushName:
+          type: string
+          description: "Sender WhatsApp profile name"
+          example: "Andi Wijaya"
+        isGroup:
+          type: boolean
+          description: "Whether the message came from a group"
+          example: false
+        timestamp:
+          type: integer
+          format: int64
+          description: "Message time in Unix Timestamp format"
+          example: 1672531199
+        type:
+          type: string
+          enum: [text, image, video, document, audio, poll, unknown]
+          example: "text"
+        text:
+          $ref: "#/components/schemas/TextMessageContent"
+        image:
+          $ref: "#/components/schemas/MediaMessageContent"
+        video:
+          $ref: "#/components/schemas/MediaMessageContent"
+        document:
+          $ref: "#/components/schemas/DocumentMessageContent"
+        poll:
+          $ref: "#/components/schemas/PollMessageContent"
+
+    # --- EXISTING SCHEMAS (Dari file lama Anda) ---
     ApiKey:
       type: object
       properties:
@@ -611,21 +797,6 @@ components:
         webhookUrl:
           type: string
           nullable: true
-
-    Message:
-      type: object
-      properties:
-        id:
-          type: string
-        to:
-          type: string
-        from:
-          type: string
-        content:
-          type: object
-        timestamp:
-          type: number
-
 tags:
   - name: Health
     description: Service health endpoints

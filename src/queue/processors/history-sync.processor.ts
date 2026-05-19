@@ -107,24 +107,30 @@ export class HistorySyncProcessor extends WorkerHost {
   }
 
   private async runBatched(
-    ops: BatchOperation[],
+    ops: any[],
     label: string,
     sessionId: string,
-    batchSize = 100,
+    batchSize = 50,
   ) {
     for (let i = 0; i < ops.length; i += batchSize) {
       const batch = ops.slice(i, i + batchSize);
       try {
-        await this.prisma.$transaction(batch);
+        const results = await Promise.allSettled(batch);
+        const failed = results.filter((r) => r.status === 'rejected');
+        if (failed.length > 0) {
+          this.logger.warn(
+            `Failed to sync ${failed.length} ${label} in batch (${i}-${i + batch.length}) for ${sessionId}`,
+          );
+        }
       } catch (err) {
-        this.logger.warn(
-          `Failed to sync ${label} batch (${i}-${i + batchSize}) for ${sessionId}: ${err}`,
+        this.logger.error(
+          `Critical error syncing ${label} batch for ${sessionId}: ${err}`,
         );
       }
     }
   }
 
-  private buildChatUpsert(sessionId: string, chat: Chat): BatchOperation[] {
+  private buildChatUpsert(sessionId: string, chat: Chat): any[] {
     if (!chat.id) {
       return [];
     }
@@ -164,7 +170,7 @@ export class HistorySyncProcessor extends WorkerHost {
   private buildMessageUpserts(
     sessionId: string,
     message: WAMessage,
-  ): BatchOperation[] {
+  ): any[] {
     const remoteJid = message.key.remoteJid;
     const messageId = message.key.id;
     if (!remoteJid || !messageId) {
