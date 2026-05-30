@@ -22,6 +22,7 @@ import { AdminModule } from './admin/admin.module.js';
 import { MediaModule } from './media/media.module.js';
 import { BaileysExceptionFilter } from './common/filters/baileys-exception.filter.js';
 import { AppConfigModule } from './common/config/config.module.js';
+import { PlannedModule } from './planned/planned.module.js';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { AppConfigModule } from './common/config/config.module.js';
     EventModule,
     AdminModule,
     MediaModule,
+    PlannedModule,
   ],
   providers: [
     {

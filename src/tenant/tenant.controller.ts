@@ -8,22 +8,32 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiSecurity, ApiParam } from '@nestjs/swagger';
 import { TenantService } from './tenant.service.js';
 import { CreateTenantDto } from './dto/create-tenant.dto.js';
 import { UpdateTenantDto } from './dto/update-tenant.dto.js';
+import { AdminGuard } from '../admin/guards/admin.guard.js';
 
-@ApiTags('Tenant')
+@ApiTags('Admin')
 @ApiSecurity('x-api-key')
-@Controller('tenants')
+@Controller('admin/tenants')
+@UseGuards(AdminGuard)
 export class TenantController {
   constructor(private readonly tenantService: TenantService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new tenant' })
   async create(@Body() dto: CreateTenantDto) {
-    return this.tenantService.create(dto);
+    const tenant = await this.tenantService.create(dto);
+    return {
+      success: true,
+      data: {
+        tenant,
+        apiKey: tenant.apiKey, // Assuming this exists or is generated
+      }
+    };
   }
 
   @Get()

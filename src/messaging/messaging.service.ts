@@ -28,6 +28,8 @@ import {
   SendStatusDto,
 } from './dto/messaging.dto.js';
 
+import { MessageProducer } from '../queue/producers/message.producer.js';
+
 @Injectable()
 export class MessagingService {
   private readonly logger = new Logger(MessagingService.name);
@@ -35,7 +37,7 @@ export class MessagingService {
   constructor(
     private readonly sessionService: SessionService,
     private readonly sessionDataService: SessionDataService,
-    private readonly queueService: QueueService,
+    private readonly messageProducer: MessageProducer,
   ) {}
 
   private formatJid(jid: string): string {
@@ -67,8 +69,8 @@ export class MessagingService {
     const opts: MiscMessageGenerationOptions = {};
     if (quoted) opts.quoted = quoted;
 
-    const result = await socket.sendMessage(jid, { text: dto.text }, opts);
-    return { messageId: result?.key?.id, status: 'sent' };
+    const result = await this.messageProducer.send(sessionId, jid, { text: dto.text }, { quoted: dto.quotedMessageId });
+    return { success: true, data: { jobId: result.jobId } };
   }
 
   async sendMedia(sessionId: string, dto: SendMediaDto) {
@@ -146,8 +148,8 @@ export class MessagingService {
         );
     }
 
-    const result = await socket.sendMessage(jid, messageContent, opts);
-    return { messageId: result?.key?.id, status: 'sent' };
+    const result = await this.messageProducer.send(sessionId, jid, messageContent, { quoted: dto.quotedMessageId });
+    return { success: true, data: { jobId: result.jobId } };
   }
 
   async sendContact(sessionId: string, dto: SendContactDto) {
@@ -167,7 +169,7 @@ export class MessagingService {
         .join('\n');
     });
 
-    const result = await socket.sendMessage(jid, {
+    const result = await this.messageProducer.send(sessionId, jid, {
       contacts: {
         displayName:
           dto.contacts.length === 1
@@ -175,40 +177,37 @@ export class MessagingService {
             : `${dto.contacts.length} contacts`,
         contacts: vCards.map((vcard) => ({ vcard })),
       },
-    });
-
-    return { messageId: result?.key?.id, status: 'sent' };
+    }, { quoted: dto.quotedMessageId });
+    return { success: true, data: { jobId: result.jobId } };
   }
 
   async sendLocation(sessionId: string, dto: SendLocationDto) {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
 
-    const result = await socket.sendMessage(jid, {
+    const result = await this.messageProducer.send(sessionId, jid, {
       location: {
         degreesLatitude: dto.latitude,
         degreesLongitude: dto.longitude,
         name: dto.name,
         address: dto.address,
       },
-    });
-
-    return { messageId: result?.key?.id, status: 'sent' };
+    }, { quoted: dto.quotedMessageId });
+    return { success: true, data: { jobId: result.jobId } };
   }
 
   async sendPoll(sessionId: string, dto: SendPollDto) {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
 
-    const result = await socket.sendMessage(jid, {
+    const result = await this.messageProducer.send(sessionId, jid, {
       poll: {
         name: dto.name,
         values: dto.options.map((o) => o.name),
         selectableCount: dto.selectableCount ?? 1,
       },
-    });
-
-    return { messageId: result?.key?.id, status: 'sent' };
+    }, { quoted: dto.quotedMessageId });
+    return { success: true, data: { jobId: result.jobId } };
   }
 
   async sendButtons(sessionId: string, dto: SendButtonsDto) {
@@ -222,9 +221,8 @@ export class MessagingService {
       headerType: 1,
     } as unknown as AnyMessageContent;
 
-    const result = await socket.sendMessage(jid, content);
-
-    return { messageId: result?.key?.id, status: 'sent' };
+    const result = await this.messageProducer.send(sessionId, jid, content, { quoted: dto.quotedMessageId });
+    return { success: true, data: { jobId: result.jobId } };
   }
 
   async sendList(sessionId: string, dto: SendListDto) {
@@ -239,16 +237,15 @@ export class MessagingService {
       sections: dto.sections,
     } as unknown as AnyMessageContent;
 
-    const result = await socket.sendMessage(jid, content);
-
-    return { messageId: result?.key?.id, status: 'sent' };
+    const result = await this.messageProducer.send(sessionId, jid, content, { quoted: dto.quotedMessageId });
+    return { success: true, data: { jobId: result.jobId } };
   }
 
   async sendReaction(sessionId: string, dto: SendReactionDto) {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
 
-    const result = await socket.sendMessage(jid, {
+    const result = await this.messageProducer.send(sessionId, jid, {
       react: {
         text: dto.reaction,
         key: {
@@ -256,9 +253,8 @@ export class MessagingService {
           id: dto.messageId,
         },
       },
-    });
-
-    return { messageId: result?.key?.id, status: 'sent' };
+    }, { quoted: dto.quotedMessageId });
+    return { success: true, data: { jobId: result.jobId } };
   }
 
   async editMessage(sessionId: string, dto: EditMessageDto) {
@@ -271,7 +267,7 @@ export class MessagingService {
       fromMe: true,
     };
 
-    const result = await socket.sendMessage(jid, {
+    const result = await this.messageProducer.send(sessionId, jid, {
       text: dto.text,
       edit: editKey,
     });
@@ -290,9 +286,8 @@ export class MessagingService {
     };
 
     if (dto.forEveryone !== false) {
-      await socket.sendMessage(jid, {
-        delete: messageKey,
-      });
+      const result = await this.messageProducer.send(sessionId, jid, { delete: messageKey });
+      return { success: true, data: { jobId: result.jobId } };
     } else {
       const modification: ChatModification = {
         deleteForMe: {
@@ -302,19 +297,18 @@ export class MessagingService {
         },
       };
       await socket.chatModify(modification, jid);
+      return { status: 'deleted' };
     }
-
-    return { status: 'deleted' };
   }
 
   async forwardMessage(sessionId: string, dto: ForwardMessageDto) {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(dto.to);
 
-    const result = await socket.sendMessage(jid, {
+    const result = await this.messageProducer.send(sessionId, jid, {
       forward: this.toWAMessage(dto.message),
     });
-    return { messageId: result?.key?.id, status: 'forwarded' };
+    return { success: true, data: { jobId: result.jobId } };
   }
 
   async readMessages(sessionId: string, dto: ReadMessagesDto) {
@@ -341,11 +335,10 @@ export class MessagingService {
     const socket = this.sessionService.getSocket(sessionId);
     const jid = this.formatJid(to);
 
-    const result = await socket.sendMessage(jid, {
+    const result = await this.messageProducer.send(sessionId, jid, {
       text: text ? `${text}\n${url}` : url,
     });
-
-    return { messageId: result?.key?.id, status: 'sent' };
+    return { success: true, data: { jobId: result.jobId } };
   }
 
   async sendStatus(sessionId: string, dto: SendStatusDto) {
@@ -409,8 +402,7 @@ export class MessagingService {
         );
     }
 
-    const result = await socket.sendMessage(statusJid, messageContent, options);
-
-    return { messageId: result?.key?.id, status: 'posted' };
+    const result = await this.messageProducer.send(sessionId, statusJid, messageContent);
+    return { success: true, data: { jobId: result.jobId } };
   }
 }

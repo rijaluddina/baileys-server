@@ -59,7 +59,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    response.status(status).send({
+    response.type('application/json').status(status).send({
       success: false,
       statusCode: status,
       message: Array.isArray(message) ? message : [message],

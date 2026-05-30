@@ -7,18 +7,26 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateSessionDto {
-  @ApiProperty({ description: 'Unique session ID', example: 'my-session' })
+  @ApiProperty({ description: 'Human-readable session label (unique within tenant)' })
   @IsString()
   @IsNotEmpty()
+  @MinLength(3)
+  @MaxLength(64)
+  name!: string;
+
+  @ApiPropertyOptional({ description: 'Custom session ID (auto-generated UUID if omitted)', example: 'my-session' })
+  @IsOptional()
+  @IsString()
   @Matches(/^[a-zA-Z0-9_-]+$/, {
     message: 'Session ID must be alphanumeric with dashes/underscores',
   })
   @MinLength(3)
   @MaxLength(64)
-  sessionId!: string;
+  sessionId?: string;
 
   @ApiPropertyOptional({ description: 'Webhook URL for this session' })
   @IsOptional()
@@ -30,6 +38,7 @@ export class CreateSessionDto {
     default: false,
   })
   @IsOptional()
+  @IsBoolean()
   pairingCode?: boolean;
 
   @ApiPropertyOptional({
@@ -41,19 +50,34 @@ export class CreateSessionDto {
   phoneNumber?: string;
 }
 
-export class SessionStatusDto {
+export class SessionResponseDto {
   @ApiProperty()
   sessionId!: string;
 
-  @ApiProperty({ enum: ['connecting', 'open', 'close'] })
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty({ enum: ['created', 'initializing', 'qr_ready', 'pairing', 'authenticated', 'connected', 'reconnecting', 'disconnected', 'destroyed'] })
   status!: string;
 
   @ApiPropertyOptional()
-  qr?: string;
+  qrCode?: string;
 
   @ApiPropertyOptional()
   pairingCode?: string;
 
   @ApiPropertyOptional()
-  user?: Record<string, unknown>;
+  phoneNumber?: string;
+
+  @ApiPropertyOptional()
+  userName?: string;
+
+  @ApiPropertyOptional()
+  lastActiveAt?: string;
+
+  @ApiPropertyOptional()
+  createdAt?: string;
+
+  @ApiPropertyOptional()
+  updatedAt?: string;
 }

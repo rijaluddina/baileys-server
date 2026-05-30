@@ -1,4 +1,4 @@
-import { Controller, Post, Param, Body } from '@nestjs/common';
+import { Controller, Post, Patch, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiSecurity, ApiParam } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { MessagingService } from './messaging.service.js';
@@ -28,6 +28,7 @@ export class MessagingController {
   constructor(private readonly messagingService: MessagingService) {}
 
   @Post('text')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Send a text message' })
   @ApiParam({ name: 'sessionId' })
   sendText(
@@ -38,6 +39,7 @@ export class MessagingController {
   }
 
   @Post('media')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({
     summary: 'Send media (image, video, audio, document, sticker)',
   })
@@ -50,6 +52,7 @@ export class MessagingController {
   }
 
   @Post('contact')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Send contact card (vCard)' })
   @ApiParam({ name: 'sessionId' })
   sendContact(
@@ -60,6 +63,7 @@ export class MessagingController {
   }
 
   @Post('location')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Send location' })
   @ApiParam({ name: 'sessionId' })
   sendLocation(
@@ -70,6 +74,7 @@ export class MessagingController {
   }
 
   @Post('poll')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Send a poll' })
   @ApiParam({ name: 'sessionId' })
   sendPoll(
@@ -80,6 +85,7 @@ export class MessagingController {
   }
 
   @Post('buttons')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Send buttons message' })
   @ApiParam({ name: 'sessionId' })
   sendButtons(
@@ -90,6 +96,7 @@ export class MessagingController {
   }
 
   @Post('list')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Send list message' })
   @ApiParam({ name: 'sessionId' })
   sendList(
@@ -100,6 +107,7 @@ export class MessagingController {
   }
 
   @Post('reaction')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Send reaction emoji to a message' })
   @ApiParam({ name: 'sessionId' })
   sendReaction(
@@ -120,6 +128,7 @@ export class MessagingController {
   }
 
   @Post('delete')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Delete a message (for everyone or just me)' })
   @ApiParam({ name: 'sessionId' })
   deleteMessage(
@@ -130,6 +139,7 @@ export class MessagingController {
   }
 
   @Post('forward')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Forward a message to another chat' })
   @ApiParam({ name: 'sessionId' })
   forwardMessage(
@@ -160,6 +170,7 @@ export class MessagingController {
   }
 
   @Post('status')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Post a status/story (text, image, or video)' })
   @ApiParam({ name: 'sessionId' })
   sendStatus(
@@ -170,6 +181,7 @@ export class MessagingController {
   }
 
   @Post('link-preview')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Send a message with link preview' })
   @ApiParam({ name: 'sessionId' })
   sendLinkPreview(

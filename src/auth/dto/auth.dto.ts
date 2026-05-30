@@ -20,3 +20,35 @@ export class AuthResponseDto {
   @ApiProperty({ description: 'Whether the key is valid' })
   valid: boolean;
 }
+
+export class ApiKeyDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty()
+  keyPrefix!: string;
+
+  @ApiProperty()
+  isActive!: boolean;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  permissions?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  ipWhitelist?: string[];
+
+  @ApiProperty()
+  createdAt!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  expiresAt?: string;
+
+  @ApiProperty()
+  lastUsedAt!: string;
+}

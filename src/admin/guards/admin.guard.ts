@@ -5,7 +5,10 @@ import {
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
+import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator.js';
 
 export interface AdminJwtPayload {
   sub: string;
@@ -18,13 +21,40 @@ export interface AdminJwtPayload {
 
 @Injectable()
 export class AdminGuard implements CanActivate {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly reflector: Reflector,
+  ) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<{
-      headers?: { authorization?: string };
+      headers?: { authorization?: string; 'x-master-key'?: string };
       user?: AdminJwtPayload;
     }>();
+
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (isPublic) {
+      return true;
+    }
+
+    const masterKey = request.headers?.['x-master-key'];
+    const configuredMasterKey = this.configService.get<string>('MASTER_API_KEY');
+
+    if (masterKey && configuredMasterKey) {
+      const masterKeyBuffer = Buffer.from(masterKey);
+      const configuredKeyBuffer = Buffer.from(configuredMasterKey);
+      const isMatch =
+        masterKeyBuffer.length === configuredKeyBuffer.length &&
+        crypto.timingSafeEqual(masterKeyBuffer, configuredKeyBuffer);
+      if (isMatch) {
+        return true;
+      }
+    }
+
     const authHeader = request.headers?.authorization;
 
     if (!authHeader?.startsWith('Bearer ')) {

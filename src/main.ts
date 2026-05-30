@@ -18,7 +18,9 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   // Global prefix
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('v1', {
+    exclude: ['health/(.*)', 'health'],
+  });
 
   // CORS
   app.enableCors({ origin: getCorsOrigin() });

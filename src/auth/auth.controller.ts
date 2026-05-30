@@ -60,4 +60,28 @@ export class AuthController {
   async activateKey(@Param('id') id: string) {
     return this.apiKeyService.activateKey(id);
   }
+
+  @Post('login')
+  @ApiOperation({ summary: 'Login with email and password to get JWT' })
+  async login(@Body() body: any) {
+    throw new NotFoundException('JWT Authentication is planned and requires User schema.');
+  }
+
+  @Post('refresh')
+  @ApiOperation({ summary: 'Refresh JWT token' })
+  async refresh(@Body() body: any) {
+    throw new NotFoundException('JWT Authentication is planned.');
+  }
+
+  @Post('logout')
+  @ApiOperation({ summary: 'Logout and invalidate refresh token' })
+  async logout(@Body() body: any) {
+    throw new NotFoundException('JWT Authentication is planned.');
+  }
+
+  @Post('logout-all')
+  @ApiOperation({ summary: 'Logout from all devices' })
+  async logoutAll() {
+    throw new NotFoundException('JWT Authentication is planned.');
+  }
 }

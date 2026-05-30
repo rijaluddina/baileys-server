@@ -1,16 +1,14 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service.js';
 import { AdminGuard } from './guards/admin.guard.js';
+import { Public } from '../common/decorators/public.decorator.js';
 
 @Controller('admin')
 @UseGuards(AdminGuard)
+@Public()
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Get('tenants')
-  async getAllTenants() {
-    return this.adminService.getAllTenants();
-  }
 
   @Get('sessions')
   async getAllSessions(@Query('tenantId') tenantId?: string) {

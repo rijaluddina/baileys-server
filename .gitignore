@@ -46,8 +46,8 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
-plan
-superpowers
+#plan
+#superpowers
 
 # Runtime data
 pids

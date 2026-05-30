@@ -38,7 +38,9 @@ export class SessionController {
   @Post()
   @ApiOperation({ summary: 'Create a new WhatsApp session' })
   async create(@Body() dto: CreateSessionDto) {
-    return this.sessionService.createSession(dto.sessionId, {
+    const crypto = await import('crypto');
+    const sessionId = dto.sessionId || crypto.randomUUID();
+    return this.sessionService.createSession(sessionId, {
       webhookUrl: dto.webhookUrl,
       pairingCode: dto.pairingCode,
       phoneNumber: dto.phoneNumber,

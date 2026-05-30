@@ -60,7 +60,7 @@ export class MessageProducer {
 
     const jobName = `send-${sessionId}-${to}-${Date.now()}`;
 
-    await this.messageSendQueue.add(jobName, jobData, {
+    const job = await this.messageSendQueue.add(jobName, jobData, {
       attempts: 3,
       backoff: { type: 'exponential', delay: 1000 },
       priority:
@@ -72,7 +72,7 @@ export class MessageProducer {
     this.logger.debug(
       `Queued message send job for session ${sessionId} to ${to}`,
     );
-    return { jobName, sessionId, to };
+    return { jobName, sessionId, to, jobId: job.id };
   }
 
   async sendBulk(
